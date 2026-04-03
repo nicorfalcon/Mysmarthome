@@ -12,6 +12,7 @@ export interface Device {
   roomId: string;
   lastActivity: string;
   energyConsumption?: number; // in kWh
+  isFavorite?: boolean;
 }
 
 export interface Room {

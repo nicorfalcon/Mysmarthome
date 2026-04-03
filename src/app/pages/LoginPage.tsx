@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router';
 import { useApp } from '../context/AppContext';
 import { MobileFrame } from '../components/MobileFrame';
 import { User, Lock, Eye, EyeOff } from 'lucide-react';
-import logoImg from 'figma:asset/374d0b31a8553c4245638c51c59f7893e3ca122a.png';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -34,12 +33,9 @@ export function LoginPage() {
     <MobileFrame>
       <div className="flex flex-col flex-1 px-8 justify-center items-center">
         {/* Logo */}
-        <img
-          src={logoImg}
-          alt="My Smart Home"
-          className="mb-6"
-          style={{ width: '200px', height: 'auto' }}
-        />
+        <h1 className="mb-6 text-3xl font-bold" style={{ color: 'var(--primary)' }}>
+          My Smart Home
+        </h1>
 
         <p style={{ color: 'var(--muted-foreground)', fontSize: '14px' }} className="mb-10">
           Manage your home, anywhere

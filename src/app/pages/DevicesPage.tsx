@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Plus, Pencil, X, Cpu, Trash2, Check } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, X, Cpu, Trash2, Check, Star } from 'lucide-react';
 import { DeviceIcon, getDeviceRichStatus } from '../components/DeviceIcon';
 import type { Device } from '../data/mockData';
 import { useTranslation } from '../i18n/useTranslation';
@@ -11,7 +11,7 @@ const deviceTypes: Device['type'][] = ['lamp', 'ac', 'oven', 'curtains', 'speake
 export function DevicesPage() {
   const { homeId, roomId } = useParams();
   const navigate = useNavigate();
-  const { homes, addDevice, updateDevice, deleteDevice, preferences } = useApp();
+  const { homes, addDevice, updateDevice, deleteDevice, toggleFavorite, preferences } = useApp();
   const { t } = useTranslation();
 
   const home = homes.find((h) => h.id === homeId);
@@ -232,7 +232,46 @@ export function DevicesPage() {
                   </div>
                 </button>
                 
-                {/* Circular Delete Button */}
+                {/* Favorite star button — shown when not in edit mode */}
+                {!isEditMode && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(device.id);
+                    }}
+                    className="absolute flex items-center justify-center"
+                    style={{
+                      top: '12px',
+                      right: '12px',
+                      width: '28px',
+                      height: '28px',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      zIndex: 10,
+                      transition: 'transform 150ms ease',
+                    }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      e.currentTarget.style.transform = 'scale(0.82)';
+                    }}
+                    onMouseUp={(e) => {
+                      e.stopPropagation();
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                  >
+                    <Star
+                      size={16}
+                      color={device.isFavorite ? '#FFD60A' : 'var(--muted-foreground)'}
+                      fill={device.isFavorite ? '#FFD60A' : 'none'}
+                      strokeWidth={2}
+                    />
+                  </button>
+                )}
+
+                {/* Delete button — shown in edit mode */}
                 {isEditMode && (
                   <button
                     onClick={(e) => {

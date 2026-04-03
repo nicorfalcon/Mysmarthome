@@ -38,6 +38,7 @@ interface AppState {
   deleteRoom: (homeId: string, roomId: string) => void;
   addDevice: (homeId: string, roomId: string, device: Device) => void;
   deleteDevice: (deviceId: string) => void;
+  toggleFavorite: (deviceId: string) => void;
   updatePreferences: (updates: Partial<Preferences>) => void;
 }
 
@@ -193,9 +194,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...home,
         rooms: home.rooms.map((room) => ({
           ...room,
-          devices: room.devices.map((d) =>
-            d.id === deviceId ? { ...d, isOn: !d.isOn } : d
-          ),
+          devices: room.devices.map((d) => {
+            if (d.id !== deviceId) return d;
+            const newIsOn = !d.isOn;
+            return {
+              ...d,
+              isOn: newIsOn,
+              ...(d.type === 'alarm' ? { mode: newIsOn ? 'Armed' : 'Disarmed' } : {}),
+            };
+          }),
         })),
       }))
     );
@@ -316,6 +323,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const toggleFavorite = (deviceId: string) => {
+    setHomes((prev) =>
+      prev.map((home) => ({
+        ...home,
+        rooms: home.rooms.map((room) => ({
+          ...room,
+          devices: room.devices.map((d) =>
+            d.id === deviceId ? { ...d, isFavorite: !d.isFavorite } : d
+          ),
+        })),
+      }))
+    );
+  };
+
   const deleteDevice = (deviceId: string) => {
     setHomes((prev) =>
       prev.map((home) => ({
@@ -371,6 +392,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deleteRoom,
         addDevice,
         deleteDevice,
+        toggleFavorite,
         updatePreferences,
       }}
     >
