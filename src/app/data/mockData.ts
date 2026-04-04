@@ -30,6 +30,10 @@ export interface Device {
   acFanSpeed?: string;
   // Fridge-specific
   freezerTemperature?: number;
+  // Vacuum-specific
+  vacuumMode?: string;
+  dockLocation?: string;
+  cleaningLocation?: string;
 }
 
 export interface Room {
@@ -51,7 +55,7 @@ export interface Routine {
   id: string;
   name: string;
   description: string;
-  devices: { deviceId: string; action: string }[];
+  devices: { deviceId: string; action: string; params?: Record<string, unknown> }[];
   triggerTime: string;
   isActive: boolean;
   isRunning: boolean;
@@ -288,6 +292,9 @@ export const mockHomes: Home[] = [
             type: 'vacuum',
             isOn: false,
             mode: 'Docked',
+            vacuumMode: 'vacuum',
+            dockLocation: 'room-3',
+            cleaningLocation: 'room-3',
             roomId: 'room-3',
             lastActivity: '1 day ago',
             energyConsumption: 2.4,

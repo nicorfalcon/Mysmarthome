@@ -61,6 +61,9 @@ export function DeviceControlPage() {
   const [showOvenTimerModal, setShowOvenTimerModal] = useState(false);
   const [ovenTimerInput, setOvenTimerInput] = useState('');
 
+  // Vacuum location modal
+  const [locationModalType, setLocationModalType] = useState<'dock' | 'cleaning' | null>(null);
+
   // Display recent colors in order (most recent first / leftmost)
   // If no recent colors, show default colors
   const displayedRecentColors = recentColors.length > 0 
@@ -230,6 +233,7 @@ export function DeviceControlPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => { setEditName(device.name); setShowEditModal(true); }}
             className="flex items-center justify-center rounded-full"
             style={{ width: '36px', height: '36px', backgroundColor: 'var(--card)', boxShadow: 'var(--shadow-sm)' }}
           >
@@ -1560,33 +1564,151 @@ export function DeviceControlPage() {
 
       {/* === VACUUM CONTROLS === */}
       {device.type === 'vacuum' && (
-        <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
-          <p className="text-white mb-3" style={{ fontSize: '14px', fontWeight: 500 }}>
-            {t('deviceControl.mode')}
-          </p>
-          <div className="flex gap-3">
-            {[{ label: t('deviceStatus.cleaning'), value: 'Cleaning' }, { label: t('deviceStatus.paused'), value: 'Paused' }, { label: t('deviceControl.docked'), value: 'Docked' }].map(({ label, value: mode }) => (
-              <button
-                key={mode}
-                onClick={() =>
-                  updateDevice(device.id, {
-                    mode,
-                    isOn: mode === 'Cleaning',
-                  })
-                }
-                className="flex-1 py-3 rounded-xl transition-all"
-                style={{
-                  backgroundColor: device.mode === mode ? '#7C5CFF' : 'var(--muted)',
-                  color: '#fff',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                }}
-              >
-                {label}
-              </button>
-            ))}
+        <>
+          {/* Row 1 — Quick Actions */}
+          <div className="flex gap-3 mb-3">
+            {([
+              { label: t('vacuum.start'), action: () => updateDevice(device.id, { mode: 'Cleaning', isOn: true }), activeMode: 'Cleaning' },
+              { label: t('vacuum.pause'), action: () => updateDevice(device.id, { mode: 'Paused', isOn: false }), activeMode: 'Paused' },
+              { label: t('vacuum.dock'), action: () => updateDevice(device.id, { mode: 'Docked', isOn: false }), activeMode: 'Docked' },
+            ] as const).map(({ label, action, activeMode }) => {
+              const isActive = device.mode === activeMode;
+              return (
+                <button
+                  key={activeMode}
+                  onClick={action}
+                  style={{
+                    flex: 1, padding: '12px 8px', borderRadius: '12px', border: 'none',
+                    backgroundColor: isActive ? '#7C5CFF' : 'var(--card)',
+                    color: isActive ? '#FFFFFF' : 'var(--foreground)',
+                    fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                    boxShadow: 'var(--shadow-sm)', transition: 'all 150ms ease',
+                  }}
+                  onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
+                  onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
-        </div>
+
+          {/* Row 2 — Operating Mode */}
+          <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+            <p className="text-white mb-3" style={{ fontSize: '14px', fontWeight: 500 }}>
+              {t('vacuum.mode')}
+            </p>
+            <div className="flex gap-3">
+              {([
+                { value: 'vacuum', label: t('vacuum.vacuumMode') },
+                { value: 'mop', label: t('vacuum.mopMode') },
+              ] as const).map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => updateDevice(device.id, { vacuumMode: value })}
+                  className="flex-1 py-3 rounded-xl transition-all"
+                  style={{
+                    backgroundColor: device.vacuumMode === value ? '#7C5CFF' : 'var(--muted)',
+                    color: '#fff', fontSize: '14px', fontWeight: 500, border: 'none', cursor: 'pointer',
+                  }}
+                  onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
+                  onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Row 3 — Location Settings */}
+          <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+            {([
+              { type: 'dock' as const, label: t('vacuum.dockLocation'), roomId: device.dockLocation },
+              { type: 'cleaning' as const, label: t('vacuum.cleaningLocation'), roomId: device.cleaningLocation },
+            ]).map(({ type, label, roomId }, i) => {
+              const roomName = home.rooms.find((r) => r.id === roomId)?.name ?? '—';
+              return (
+                <button
+                  key={type}
+                  onClick={() => setLocationModalType(type)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer',
+                    borderTop: i > 0 ? '1px solid var(--border)' : 'none',
+                  }}
+                >
+                  <span style={{ color: 'var(--foreground)', fontSize: '14px', fontWeight: 500 }}>{label}</span>
+                  <span style={{ color: '#7C5CFF', fontSize: '13px', fontWeight: 500 }}>
+                    {t('vacuum.currentlyOn', { room: roomName })}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Location Selection Modal */}
+          {locationModalType && (
+            <>
+              <div
+                onClick={() => setLocationModalType(null)}
+                style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+              />
+              <div style={{
+                position: 'fixed', zIndex: 61,
+                top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                backgroundColor: 'var(--card)', borderRadius: '20px',
+                padding: '28px 24px 24px',
+                width: '90vw', maxWidth: '320px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                border: '1px solid var(--border)',
+                display: 'flex', flexDirection: 'column', gap: '16px',
+              }}>
+                <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--foreground)' }}>
+                  {t('vacuum.selectRoom')}
+                </span>
+                <div className="flex flex-col">
+                  {home.rooms.map((room, i) => (
+                    <button
+                      key={room.id}
+                      onClick={() => {
+                        updateDevice(device.id, locationModalType === 'dock'
+                          ? { dockLocation: room.id }
+                          : { cleaningLocation: room.id });
+                        setLocationModalType(null);
+                      }}
+                      style={{
+                        width: '100%', textAlign: 'left', padding: '13px 0',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        borderTop: i > 0 ? '1px solid var(--border)' : 'none',
+                        color: 'var(--foreground)', fontSize: '14px', fontWeight: 500,
+                        transition: 'color 150ms ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#7C5CFF')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--foreground)')}
+                    >
+                      {room.name}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setLocationModalType(null)}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
+                    backgroundColor: 'var(--muted)', color: 'var(--muted-foreground)',
+                    fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                  onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
+                  onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  {t('common.cancel')}
+                </button>
+              </div>
+            </>
+          )}
+        </>
       )}
 
       {/* === FRIDGE CONTROLS === */}
@@ -1680,6 +1802,92 @@ export function DeviceControlPage() {
 
       {/* Current State */}
       {/* Removed Active/Inactive labels per Material Design guidelines - state is conveyed by ON/OFF toggle */}
+
+      {/* Rename Device Modal */}
+      {showEditModal && (() => {
+        const isValid = editName.trim().length > 0;
+        const handleSave = () => {
+          if (!isValid) return;
+          updateDevice(device.id, { name: editName.trim() });
+          setShowEditModal(false);
+        };
+        return (
+          <>
+            <div
+              onClick={() => setShowEditModal(false)}
+              style={{ position: 'fixed', inset: 0, zIndex: 60, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+            />
+            <div style={{
+              position: 'fixed', zIndex: 61,
+              top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+              backgroundColor: 'var(--card)', borderRadius: '20px',
+              padding: '28px 24px 24px',
+              width: '90vw', maxWidth: '320px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              border: '1px solid var(--border)',
+              display: 'flex', flexDirection: 'column', gap: '20px',
+            }}>
+              <div className="flex items-center gap-2">
+                <Pencil size={18} color="#7C5CFF" strokeWidth={1.5} />
+                <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--foreground)' }}>
+                  {t('common.rename')}
+                </span>
+              </div>
+              <input
+                autoFocus
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSave();
+                  if (e.key === 'Escape') setShowEditModal(false);
+                }}
+                style={{
+                  width: '100%', padding: '12px 14px',
+                  borderRadius: '12px', border: `1.5px solid ${isValid ? 'var(--border)' : '#FF3B30'}`,
+                  backgroundColor: 'var(--muted)', color: 'var(--foreground)',
+                  fontSize: '15px', fontWeight: 500, outline: 'none',
+                  transition: 'border-color 150ms ease',
+                }}
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                    backgroundColor: 'var(--muted)', color: 'var(--muted-foreground)',
+                    fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                  onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
+                  onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!isValid}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                    background: isValid ? 'linear-gradient(135deg, #7C5CFF, #6B4FE0)' : 'var(--muted)',
+                    color: isValid ? '#FFFFFF' : 'var(--muted-foreground)',
+                    fontSize: '14px', fontWeight: 600,
+                    cursor: isValid ? 'pointer' : 'not-allowed',
+                    opacity: isValid ? 1 : 0.5,
+                    boxShadow: isValid ? '0 2px 8px rgba(124,92,255,0.3)' : 'none',
+                    transition: 'all 150ms ease',
+                  }}
+                  onMouseDown={(e) => { if (isValid) e.currentTarget.style.transform = 'scale(0.97)'; }}
+                  onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  {t('common.save')}
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Color Picker Modal */}
       {showColorPicker && (

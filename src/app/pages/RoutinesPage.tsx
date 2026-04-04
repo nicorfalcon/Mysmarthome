@@ -7,33 +7,16 @@ import { useTranslation } from '../i18n/useTranslation';
 
 export function RoutinesPage() {
   const navigate = useNavigate();
-  const { activeHome, activeDevices, activeRoutines, toggleRunningRoutine, updateRoutine, deleteRoutine } = useApp();
+  const { activeHome, activeDevices, activeRoutines, toggleRunningRoutine, deleteRoutine } = useApp();
   const { t } = useTranslation();
-  const [showEditModal, setShowEditModal] = useState<string | null>(null);
   const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editDesc, setEditDesc] = useState('');
-  const [editTime, setEditTime] = useState('');
 
   // Only look up devices within the active location
   const getDevice = (deviceId: string) => activeDevices.find((d) => d.id === deviceId);
 
   const handleRun = (routineId: string) => {
     toggleRunningRoutine(routineId);
-  };
-
-  const openEdit = (routine: typeof activeRoutines[0]) => {
-    setEditName(routine.name);
-    setEditDesc(routine.description);
-    setEditTime(routine.triggerTime);
-    setShowEditModal(routine.id);
-  };
-
-  const handleSaveEdit = () => {
-    if (!showEditModal || !editName.trim()) return;
-    updateRoutine(showEditModal, { name: editName.trim(), description: editDesc.trim(), triggerTime: editTime });
-    setShowEditModal(null);
   };
 
   return (
@@ -210,41 +193,6 @@ export function RoutinesPage() {
         </div>
       )}
 
-      {/* Edit Routine Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 z-30 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowEditModal(null)}>
-          <div className="w-full max-w-md rounded-t-2xl p-5" style={{ backgroundColor: 'var(--background)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <p style={{ color: 'var(--foreground)', fontSize: '18px', fontWeight: 600 }}>{t('routines.editRoutine')}</p>
-              <button onClick={() => setShowEditModal(null)}><X size={20} color="var(--muted-foreground)" /></button>
-            </div>
-            <div className="mb-4">
-              <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', marginBottom: '8px' }}>{t('routines.routineName')}</p>
-              <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)}
-                className="w-full outline-none px-4 py-3 rounded-xl"
-                style={{ backgroundColor: 'var(--muted)', border: '1px solid var(--border)', fontSize: '14px', color: 'var(--foreground)' }} />
-            </div>
-            <div className="mb-4">
-              <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', marginBottom: '8px' }}>{t('common.description')}</p>
-              <input type="text" value={editDesc} onChange={(e) => setEditDesc(e.target.value)}
-                className="w-full outline-none px-4 py-3 rounded-xl"
-                style={{ backgroundColor: 'var(--muted)', border: '1px solid var(--border)', fontSize: '14px', color: 'var(--foreground)' }} />
-            </div>
-            <div className="mb-6">
-              <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', marginBottom: '8px' }}>{t('routines.triggerTime')}</p>
-              <input type="text" value={editTime} onChange={(e) => setEditTime(e.target.value)}
-                className="w-full outline-none px-4 py-3 rounded-xl"
-                style={{ backgroundColor: 'var(--muted)', border: '1px solid var(--border)', fontSize: '14px', color: 'var(--foreground)' }} />
-            </div>
-            <button onClick={handleSaveEdit}
-              className="w-full py-3.5 rounded-xl"
-              style={{ background: 'linear-gradient(135deg, #7C5CFF, #6B4FE0)', color: '#fff', fontSize: '16px', fontWeight: 600 }}>
-              {t('common.saveChanges')}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Action Menu */}
       {showActionMenu && (
         <div className="fixed inset-0 z-30 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowActionMenu(null)}>
@@ -252,11 +200,8 @@ export function RoutinesPage() {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => {
-                  const routine = activeRoutines.find(r => r.id === showActionMenu);
-                  if (routine) {
-                    openEdit(routine);
-                    setShowActionMenu(null);
-                  }
+                  navigate(`/routines/${showActionMenu}/edit`);
+                  setShowActionMenu(null);
                 }}
                 className="w-full py-3.5 rounded-xl text-left px-4 flex items-center gap-3 transition-all"
                 style={{ backgroundColor: 'var(--card)', color: 'var(--foreground)', fontSize: '15px', fontWeight: 500 }}

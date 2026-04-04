@@ -24,8 +24,7 @@ export function DeviceInfoPage() {
   };
 
   const infoRows = [
-    { label: 'Device Name', value: device.name },
-    { label: 'Device Type', value: device.type.charAt(0).toUpperCase() + device.type.slice(1) },
+    { label: 'Device', value: device.name },
     { label: 'Room', value: room.name },
     { label: 'Home', value: home.name },
     { label: 'Current State', value: device.isOn ? 'On' : 'Off' },
