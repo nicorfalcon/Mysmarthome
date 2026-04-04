@@ -450,7 +450,7 @@ export function DeviceControlPage() {
                   <ChevronsUpDown size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
                   <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>{t('ac.verticalVanes')}</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
                   {options.map((val) => {
                     const isActive = device.verticalVanes === val;
                     const label = val === 'auto' ? t('ac.auto') : `${val}°`;
@@ -459,8 +459,8 @@ export function DeviceControlPage() {
                         key={val}
                         onClick={() => updateDevice(device.id, { verticalVanes: val })}
                         style={{
-                          padding: '8px 14px', borderRadius: '20px',
-                          fontSize: '12px', fontWeight: 500, border: 'none',
+                          padding: '11px 20px', borderRadius: '20px',
+                          fontSize: '14px', fontWeight: 500, border: 'none',
                           backgroundColor: isActive ? '#7C5CFF' : 'var(--muted)',
                           color: isActive ? '#FFFFFF' : '#B8B8C2',
                           transition: 'all 150ms ease', cursor: 'pointer',
@@ -487,7 +487,7 @@ export function DeviceControlPage() {
                   <ChevronsLeftRight size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
                   <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>{t('ac.horizontalVanes')}</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
                   {options.map((val) => {
                     const isActive = device.horizontalVanes === val;
                     const label = val === 'auto' ? t('ac.auto') : `${val}°`;
@@ -496,8 +496,8 @@ export function DeviceControlPage() {
                         key={val}
                         onClick={() => updateDevice(device.id, { horizontalVanes: val })}
                         style={{
-                          padding: '8px 14px', borderRadius: '20px',
-                          fontSize: '12px', fontWeight: 500, border: 'none',
+                          padding: '11px 20px', borderRadius: '20px',
+                          fontSize: '14px', fontWeight: 500, border: 'none',
                           backgroundColor: isActive ? '#7C5CFF' : 'var(--muted)',
                           color: isActive ? '#FFFFFF' : '#B8B8C2',
                           transition: 'all 150ms ease', cursor: 'pointer',
@@ -524,7 +524,7 @@ export function DeviceControlPage() {
                   <Gauge size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
                   <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>{t('ac.fanSpeed')}</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
                   {options.map((val) => {
                     const isActive = device.acFanSpeed === val;
                     const label = val === 'auto' ? t('ac.auto') : `${val}%`;
@@ -533,8 +533,8 @@ export function DeviceControlPage() {
                         key={val}
                         onClick={() => updateDevice(device.id, { acFanSpeed: val })}
                         style={{
-                          padding: '8px 14px', borderRadius: '20px',
-                          fontSize: '12px', fontWeight: 500, border: 'none',
+                          padding: '11px 20px', borderRadius: '20px',
+                          fontSize: '14px', fontWeight: 500, border: 'none',
                           backgroundColor: isActive ? '#7C5CFF' : 'var(--muted)',
                           color: isActive ? '#FFFFFF' : '#B8B8C2',
                           transition: 'all 150ms ease', cursor: 'pointer',
@@ -1592,25 +1592,16 @@ export function DeviceControlPage() {
       {/* === FRIDGE CONTROLS === */}
       {device.type === 'fridge' && (
         <>
+          {/* Fridge Temperature (2–8°C) */}
           <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
             <p className="text-white mb-3" style={{ fontSize: '14px', fontWeight: 500 }}>
-              {t('deviceControl.temperature')}
+              {t('fridge.fridgeTemp')}
             </p>
             <div className="flex items-center justify-center gap-6">
               <button
-                onClick={() =>
-                  updateDevice(device.id, {
-                    temperature: Math.max(2, (device.temperature ?? 4) - 1),
-                  })
-                }
+                onClick={() => updateDevice(device.id, { temperature: Math.max(2, (device.temperature ?? 4) - 1) })}
                 className="flex items-center justify-center rounded-full"
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  backgroundColor: 'var(--muted)',
-                  color: '#fff',
-                  fontSize: '20px',
-                }}
+                style={{ width: '44px', height: '44px', backgroundColor: 'var(--muted)', color: '#fff', fontSize: '20px' }}
               >
                 -
               </button>
@@ -1620,42 +1611,66 @@ export function DeviceControlPage() {
                   : `${device.temperature ?? 4}°C`}
               </p>
               <button
-                onClick={() =>
-                  updateDevice(device.id, {
-                    temperature: Math.min(8, (device.temperature ?? 4) + 1),
-                  })
-                }
+                onClick={() => updateDevice(device.id, { temperature: Math.min(8, (device.temperature ?? 4) + 1) })}
                 className="flex items-center justify-center rounded-full"
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  backgroundColor: '#7C5CFF',
-                  color: '#fff',
-                  fontSize: '20px',
-                }}
+                style={{ width: '44px', height: '44px', backgroundColor: '#7C5CFF', color: '#fff', fontSize: '20px' }}
               >
                 +
               </button>
             </div>
           </div>
+
+          {/* Freezer Temperature (-20 to -8°C) */}
           <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
             <p className="text-white mb-3" style={{ fontSize: '14px', fontWeight: 500 }}>
-              {t('deviceControl.mode')}
+              {t('fridge.freezerTemp')}
+            </p>
+            <div className="flex items-center justify-center gap-6">
+              <button
+                onClick={() => updateDevice(device.id, { freezerTemperature: Math.max(-20, (device.freezerTemperature ?? -15) - 1) })}
+                className="flex items-center justify-center rounded-full"
+                style={{ width: '44px', height: '44px', backgroundColor: 'var(--muted)', color: '#fff', fontSize: '20px' }}
+              >
+                -
+              </button>
+              <p className="text-white" style={{ fontSize: '40px', fontWeight: 700 }}>
+                {preferences.temperatureUnit === 'fahrenheit'
+                  ? `${Math.round((device.freezerTemperature ?? -15) * 9 / 5 + 32)}°F`
+                  : `${device.freezerTemperature ?? -15}°C`}
+              </p>
+              <button
+                onClick={() => updateDevice(device.id, { freezerTemperature: Math.min(-8, (device.freezerTemperature ?? -15) + 1) })}
+                className="flex items-center justify-center rounded-full"
+                style={{ width: '44px', height: '44px', backgroundColor: '#7C5CFF', color: '#fff', fontSize: '20px' }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          {/* Mode */}
+          <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+            <p className="text-white mb-3" style={{ fontSize: '14px', fontWeight: 500 }}>
+              {t('fridge.modeTitle')}
             </p>
             <div className="flex gap-3">
-              {['Eco', 'Normal', 'Turbo'].map((mode) => (
+              {([
+                { value: 'Normal', label: t('fridge.modeNormal') },
+                { value: 'Fiesta', label: t('fridge.modeParty') },
+                { value: 'Vacaciones', label: t('fridge.modeVacation') },
+              ] as const).map(({ value, label }) => (
                 <button
-                  key={mode}
-                  onClick={() => updateDevice(device.id, { mode })}
+                  key={value}
+                  onClick={() => updateDevice(device.id, { mode: value })}
                   className="flex-1 py-3 rounded-xl transition-all"
                   style={{
-                    backgroundColor: device.mode === mode ? '#7C5CFF' : 'var(--muted)',
+                    backgroundColor: device.mode === value ? '#7C5CFF' : 'var(--muted)',
                     color: '#fff',
                     fontSize: '14px',
                     fontWeight: 500,
                   }}
                 >
-                  {mode}
+                  {label}
                 </button>
               ))}
             </div>

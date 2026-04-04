@@ -28,6 +28,8 @@ export interface Device {
   verticalVanes?: string;
   horizontalVanes?: string;
   acFanSpeed?: string;
+  // Fridge-specific
+  freezerTemperature?: number;
 }
 
 export interface Room {
@@ -224,7 +226,8 @@ export const mockHomes: Home[] = [
             type: 'fridge',
             isOn: true,
             temperature: 4,
-            mode: 'Eco',
+            freezerTemperature: -15,
+            mode: 'Normal',
             roomId: 'room-2',
             lastActivity: 'Always on',
             energyConsumption: 41.5,
