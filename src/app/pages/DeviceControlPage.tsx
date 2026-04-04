@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Pencil, Info, SkipBack, SkipForward, Play, Pause, Shuffle, Repeat, Volume, Volume2, Sun, SunDim, Plus, Minimize2, Maximize2, PanelLeftClose, PanelRightOpen, Delete, Timer, Thermometer, RotateCw } from 'lucide-react';
-import { celsiusToFahrenheit } from '../utils/temperature';
+import { ArrowLeft, Pencil, Info, SkipBack, SkipForward, Play, Pause, Shuffle, Repeat, Volume, Volume2, Sun, SunDim, Plus, Minimize2, Maximize2, PanelLeftClose, PanelRightOpen, Delete, Timer, Thermometer, RotateCw, Leaf, SlidersHorizontal, Wind, Snowflake, Flame, ChevronsUpDown, ChevronsLeftRight, Gauge } from 'lucide-react';
+import { celsiusToFahrenheit, fahrenheitToCelsius } from '../utils/temperature';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { DeviceIcon } from '../components/DeviceIcon';
 import { CircularDial } from '../components/CircularDial';
@@ -49,6 +49,17 @@ export function DeviceControlPage() {
 
   // Sprinkler dispense state
   const [dispensedAmount, setDispensedAmount] = useState(device?.dispensedAmount ?? 50);
+
+  // Oven temperature modal
+  const [showOvenTempModal, setShowOvenTempModal] = useState(false);
+  const [ovenTempInput, setOvenTempInput] = useState('');
+
+  // Oven fan mode modal
+  const [fanModalOpen, setFanModalOpen] = useState<'grill' | 'conveccion' | null>(null);
+
+  // Oven timer modal
+  const [showOvenTimerModal, setShowOvenTimerModal] = useState(false);
+  const [ovenTimerInput, setOvenTimerInput] = useState('');
 
   // Display recent colors in order (most recent first / leftmost)
   // If no recent colors, show default colors
@@ -377,14 +388,170 @@ export function DeviceControlPage() {
 
       {/* === AC CONTROLS === */}
       {device.type === 'ac' && (
-        <CircularDial
-          value={device.temperature ?? 22}
-          min={18}
-          max={38}
-          onChange={(temp) => updateDevice(device.id, { temperature: temp })}
-          label="Temperature"
-          temperatureUnit={preferences.temperatureUnit}
-        />
+        <>
+          {/* Row 1 — Temperature Dial (preserved) */}
+          <CircularDial
+            value={device.temperature ?? 22}
+            min={18}
+            max={38}
+            onChange={(temp) => updateDevice(device.id, { temperature: temp })}
+            label="Temperature"
+            temperatureUnit={preferences.temperatureUnit}
+          />
+
+          {/* Row 2 — Mode */}
+          {(() => {
+            const modes = [
+              { key: 'ventilation', label: t('ac.ventilation'), icon: <Wind size={13} strokeWidth={1.5} /> },
+              { key: 'cool', label: t('ac.cool'), icon: <Snowflake size={13} strokeWidth={1.5} /> },
+              { key: 'heat', label: t('ac.heat'), icon: <Flame size={13} strokeWidth={1.5} /> },
+            ];
+            return (
+              <div className="p-3 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <SlidersHorizontal size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
+                  <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>{t('ac.mode')}</span>
+                </div>
+                <div className="flex gap-2">
+                  {modes.map(({ key, label, icon }) => {
+                    const isActive = device.acMode === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => updateDevice(device.id, { acMode: key })}
+                        style={{
+                          flex: 1, padding: '9px 8px', borderRadius: '20px',
+                          fontSize: '12px', fontWeight: 500, border: 'none',
+                          backgroundColor: isActive ? '#7C5CFF' : 'var(--muted)',
+                          color: isActive ? '#FFFFFF' : '#B8B8C2',
+                          transition: 'all 150ms ease', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                        }}
+                        onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
+                        onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      >
+                        <span style={{ color: isActive ? '#FFFFFF' : '#B8B8C2' }}>{icon}</span>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Row 3 — Vertical Vanes */}
+          {(() => {
+            const options = ['auto', '22', '45', '67', '90'];
+            return (
+              <div className="p-3 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <ChevronsUpDown size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
+                  <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>{t('ac.verticalVanes')}</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {options.map((val) => {
+                    const isActive = device.verticalVanes === val;
+                    const label = val === 'auto' ? t('ac.auto') : `${val}°`;
+                    return (
+                      <button
+                        key={val}
+                        onClick={() => updateDevice(device.id, { verticalVanes: val })}
+                        style={{
+                          padding: '8px 14px', borderRadius: '20px',
+                          fontSize: '12px', fontWeight: 500, border: 'none',
+                          backgroundColor: isActive ? '#7C5CFF' : 'var(--muted)',
+                          color: isActive ? '#FFFFFF' : '#B8B8C2',
+                          transition: 'all 150ms ease', cursor: 'pointer',
+                        }}
+                        onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
+                        onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Row 4 — Horizontal Vanes */}
+          {(() => {
+            const options = ['auto', '-90', '-45', '0', '45', '90'];
+            return (
+              <div className="p-3 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <ChevronsLeftRight size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
+                  <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>{t('ac.horizontalVanes')}</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {options.map((val) => {
+                    const isActive = device.horizontalVanes === val;
+                    const label = val === 'auto' ? t('ac.auto') : `${val}°`;
+                    return (
+                      <button
+                        key={val}
+                        onClick={() => updateDevice(device.id, { horizontalVanes: val })}
+                        style={{
+                          padding: '8px 14px', borderRadius: '20px',
+                          fontSize: '12px', fontWeight: 500, border: 'none',
+                          backgroundColor: isActive ? '#7C5CFF' : 'var(--muted)',
+                          color: isActive ? '#FFFFFF' : '#B8B8C2',
+                          transition: 'all 150ms ease', cursor: 'pointer',
+                        }}
+                        onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
+                        onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Row 5 — Fan Speed */}
+          {(() => {
+            const options = ['auto', '25', '50', '75', '100'];
+            return (
+              <div className="p-3 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <Gauge size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
+                  <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>{t('ac.fanSpeed')}</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {options.map((val) => {
+                    const isActive = device.acFanSpeed === val;
+                    const label = val === 'auto' ? t('ac.auto') : `${val}%`;
+                    return (
+                      <button
+                        key={val}
+                        onClick={() => updateDevice(device.id, { acFanSpeed: val })}
+                        style={{
+                          padding: '8px 14px', borderRadius: '20px',
+                          fontSize: '12px', fontWeight: 500, border: 'none',
+                          backgroundColor: isActive ? '#7C5CFF' : 'var(--muted)',
+                          color: isActive ? '#FFFFFF' : '#B8B8C2',
+                          transition: 'all 150ms ease', cursor: 'pointer',
+                        }}
+                        onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
+                        onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+        </>
       )}
 
       {/* === OVEN CONTROLS === */}
@@ -395,44 +562,82 @@ export function DeviceControlPage() {
             {/* Izquierda: Ventilación (Convección + Grill) */}
             <div className="p-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
               <div className="flex items-center gap-2 mb-3">
-                <RotateCw size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
+                <SlidersHorizontal size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
                 <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>
                   {t('oven.fanModes')}
                 </span>
               </div>
               <div className="flex flex-col gap-2">
-                {[
-                  { label: t('oven.convection'), value: 'conveccion' },
-                  { label: t('oven.grill'), value: 'grill' },
-                ].map(({ label, value }) => (
-                  <button
-                    key={value}
-                    onClick={() => updateDevice(device.id, { heatSource: value })}
-                    style={{
-                      padding: '8px 10px',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      backgroundColor: (device.heatSource ?? 'conveccion') === value ? '#7C5CFF' : 'var(--muted)',
-                      color: (device.heatSource ?? 'conveccion') === value ? '#FFFFFF' : '#B8B8C2',
-                      border: 'none',
-                      transition: 'all 150ms ease',
-                      textAlign: 'center' as const,
-                    }}
-                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
-                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  >
-                    {label}
-                  </button>
-                ))}
+
+                {/* ── Convección ── */}
+                {(() => {
+                  const isActive = !!device.convectionMode && device.convectionMode !== 'apagado';
+                  const isEco = isActive && device.convectionMode === 'economico';
+                  return (
+                    <button
+                      onClick={() => {
+                        if (isActive) {
+                          updateDevice(device.id, { convectionMode: 'apagado' });
+                        } else {
+                          setFanModalOpen('conveccion');
+                        }
+                      }}
+                      style={{
+                        width: '100%', padding: '8px 10px', borderRadius: '20px',
+                        fontSize: '12px', fontWeight: 500, border: 'none',
+                        backgroundColor: isActive ? '#7C5CFF' : 'var(--muted)',
+                        color: isActive ? '#FFFFFF' : '#B8B8C2',
+                        transition: 'all 150ms ease', textAlign: 'center' as const, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                      }}
+                      onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
+                      onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    >
+                      {isEco && <Leaf size={11} color="#34C759" strokeWidth={2.5} />}
+                      {t('oven.convection')}
+                    </button>
+                  );
+                })()}
+
+                {/* ── Grill ── */}
+                {(() => {
+                  const isActive = !!device.grillMode && device.grillMode !== 'apagado';
+                  const isEco = isActive && device.grillMode === 'economico';
+                  return (
+                    <button
+                      onClick={() => {
+                        if (isActive) {
+                          updateDevice(device.id, { grillMode: 'apagado' });
+                        } else {
+                          setFanModalOpen('grill');
+                        }
+                      }}
+                      style={{
+                        width: '100%', padding: '8px 10px', borderRadius: '20px',
+                        fontSize: '12px', fontWeight: 500, border: 'none',
+                        backgroundColor: isActive ? '#7C5CFF' : 'var(--muted)',
+                        color: isActive ? '#FFFFFF' : '#B8B8C2',
+                        transition: 'all 150ms ease', textAlign: 'center' as const, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                      }}
+                      onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
+                      onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    >
+                      {isEco && <Leaf size={11} color="#34C759" strokeWidth={2.5} />}
+                      {t('oven.grill')}
+                    </button>
+                  );
+                })()}
+
               </div>
             </div>
 
             {/* Derecha: Resistencias (Convencional + Abajo + Arriba) */}
             <div className="p-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
               <div className="flex items-center gap-2 mb-3">
-                <Thermometer size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
+                <Wind size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
                 <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>
                   {t('oven.elementModes')}
                 </span>
@@ -445,14 +650,17 @@ export function DeviceControlPage() {
                 ].map(({ label, value }) => (
                   <button
                     key={value}
-                    onClick={() => updateDevice(device.id, { heatSource: value })}
+                    onClick={() => {
+                      // Only updates heatSource — grillMode and convectionMode are untouched
+                      updateDevice(device.id, { heatSource: device.heatSource === value ? undefined : value });
+                    }}
                     style={{
                       padding: '8px 10px',
                       borderRadius: '20px',
                       fontSize: '12px',
                       fontWeight: 500,
-                      backgroundColor: (device.heatSource ?? 'conveccion') === value ? '#7C5CFF' : 'var(--muted)',
-                      color: (device.heatSource ?? 'conveccion') === value ? '#FFFFFF' : '#B8B8C2',
+                      backgroundColor: device.heatSource === value ? '#7C5CFF' : 'var(--muted)',
+                      color: device.heatSource === value ? '#FFFFFF' : '#B8B8C2',
                       border: 'none',
                       transition: 'all 150ms ease',
                       textAlign: 'center' as const,
@@ -481,8 +689,18 @@ export function DeviceControlPage() {
                   {t('deviceControl.temperature')}
                 </span>
               </div>
-              <div className="flex flex-col items-center flex-1 justify-center gap-4">
-                <div className="text-center">
+              <div className="flex flex-col items-center flex-1 justify-center">
+                <div
+                  className="text-center"
+                  onClick={() => {
+                    const display = preferences.temperatureUnit === 'fahrenheit'
+                      ? celsiusToFahrenheit(device.temperature ?? 180)
+                      : (device.temperature ?? 180);
+                    setOvenTempInput(String(display));
+                    setShowOvenTempModal(true);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <span className="text-white" style={{ fontSize: '36px', fontWeight: 700, lineHeight: 1 }}>
                     {preferences.temperatureUnit === 'fahrenheit'
                       ? celsiusToFahrenheit(device.temperature ?? 180)
@@ -491,37 +709,6 @@ export function DeviceControlPage() {
                   <span style={{ color: '#7C5CFF', fontSize: '15px', fontWeight: 600, marginLeft: '3px' }}>
                     {preferences.temperatureUnit === 'fahrenheit' ? '°F' : '°C'}
                   </span>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => updateDevice(device.id, { temperature: Math.max(90, (device.temperature ?? 180) - 10) })}
-                    className="flex items-center justify-center"
-                    style={{
-                      width: '36px', height: '36px', borderRadius: '50%',
-                      backgroundColor: 'var(--muted)', color: '#FFFFFF',
-                      fontSize: '20px', border: 'none',
-                    }}
-                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
-                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  >
-                    −
-                  </button>
-                  <button
-                    onClick={() => updateDevice(device.id, { temperature: Math.min(230, (device.temperature ?? 180) + 10) })}
-                    className="flex items-center justify-center"
-                    style={{
-                      width: '36px', height: '36px', borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #7C5CFF, #6B4FE0)',
-                      boxShadow: '0 2px 8px rgba(124,92,255,0.3)',
-                      color: '#FFFFFF', fontSize: '20px', border: 'none',
-                    }}
-                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
-                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  >
-                    +
-                  </button>
                 </div>
               </div>
             </div>
@@ -538,7 +725,14 @@ export function DeviceControlPage() {
                 </span>
               </div>
               <div className="flex flex-col items-center flex-1 justify-center gap-4">
-                <div className="text-center">
+                <div
+                  className="text-center"
+                  onClick={() => {
+                    setOvenTimerInput(String(device.timerMinutes ?? 18));
+                    setShowOvenTimerModal(true);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <span className="text-white" style={{ fontSize: '36px', fontWeight: 700, lineHeight: 1 }}>
                     {device.timerMinutes ?? 18}
                   </span>
@@ -580,6 +774,358 @@ export function DeviceControlPage() {
               </div>
             </div>
           </div>
+
+          {/* Fan Sub-mode Modal */}
+          {fanModalOpen && (() => {
+            const isGrill = fanModalOpen === 'grill';
+            const options = isGrill
+              ? [
+                  { label: t('oven.economic'), subMode: 'economico', isEco: true },
+                  { label: t('oven.full'), subMode: 'completo', isEco: false },
+                ]
+              : [
+                  { label: t('oven.economic'), subMode: 'economico', isEco: true },
+                  { label: t('oven.conventional'), subMode: 'convencional', isEco: false },
+                ];
+
+            const handleSelect = (subMode: string) => {
+              if (isGrill) {
+                updateDevice(device.id, { grillMode: subMode, convectionMode: 'apagado' });
+              } else {
+                updateDevice(device.id, { convectionMode: subMode, grillMode: 'apagado' });
+              }
+              setFanModalOpen(null);
+            };
+
+            return (
+              <>
+                {/* Backdrop */}
+                <div
+                  onClick={() => setFanModalOpen(null)}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 60,
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    backdropFilter: 'blur(4px)',
+                  }}
+                />
+                {/* Modal */}
+                <div style={{
+                  position: 'fixed', zIndex: 61,
+                  top: '50%', left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: 'var(--card)',
+                  borderRadius: '20px',
+                  padding: '28px 24px 24px',
+                  width: '90vw', maxWidth: '320px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                  border: '1px solid var(--border)',
+                  display: 'flex', flexDirection: 'column', gap: '20px',
+                }}>
+                  {/* Title */}
+                  <div className="flex items-center gap-2">
+                    <RotateCw size={18} color="#7C5CFF" strokeWidth={1.5} />
+                    <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--foreground)' }}>
+                      {isGrill ? t('oven.grill') : t('oven.convection')}
+                    </span>
+                  </div>
+
+                  {/* Options */}
+                  <div className="flex flex-col gap-2">
+                    {options.map(({ label, subMode, isEco }) => (
+                      <button
+                        key={subMode}
+                        onClick={() => handleSelect(subMode)}
+                        style={{
+                          width: '100%', padding: '14px 16px',
+                          borderRadius: '12px', border: '1px solid var(--border)',
+                          backgroundColor: 'var(--muted)',
+                          color: 'var(--foreground)',
+                          fontSize: '14px', fontWeight: 500,
+                          cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: '10px',
+                          transition: 'all 150ms ease',
+                        }}
+                        onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.98)')}
+                        onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      >
+                        {isEco && <Leaf size={16} color="#34C759" strokeWidth={2} />}
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Cancel */}
+                  <button
+                    onClick={() => setFanModalOpen(null)}
+                    style={{
+                      width: '100%', padding: '12px', borderRadius: '12px', border: 'none',
+                      backgroundColor: 'var(--muted)', color: 'var(--muted-foreground)',
+                      fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              </>
+            );
+          })()}
+
+          {/* Temperature Modal */}
+          {showOvenTempModal && (() => {
+            const MIN_C = 90, MAX_C = 230;
+            const isFahrenheit = preferences.temperatureUnit === 'fahrenheit';
+            const minDisplay = isFahrenheit ? celsiusToFahrenheit(MIN_C) : MIN_C;
+            const maxDisplay = isFahrenheit ? celsiusToFahrenheit(MAX_C) : MAX_C;
+            const unit = isFahrenheit ? '°F' : '°C';
+            const parsed = parseInt(ovenTempInput, 10);
+            const isValid = !isNaN(parsed) && parsed >= minDisplay && parsed <= maxDisplay;
+
+            const handleSave = () => {
+              if (!isValid) return;
+              const inCelsius = isFahrenheit ? fahrenheitToCelsius(parsed) : parsed;
+              updateDevice(device.id, { temperature: inCelsius });
+              setShowOvenTempModal(false);
+            };
+
+            return (
+              <>
+                {/* Backdrop */}
+                <div
+                  onClick={() => setShowOvenTempModal(false)}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 60,
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    backdropFilter: 'blur(4px)',
+                  }}
+                />
+                {/* Modal */}
+                <div style={{
+                  position: 'fixed', zIndex: 61,
+                  top: '50%', left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: 'var(--card)',
+                  borderRadius: '20px',
+                  padding: '28px 24px 24px',
+                  width: '90vw', maxWidth: '320px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                  border: '1px solid var(--border)',
+                  display: 'flex', flexDirection: 'column', gap: '20px',
+                }}>
+                  {/* Title */}
+                  <div className="flex items-center gap-2">
+                    <Thermometer size={18} color="#7C5CFF" strokeWidth={1.5} />
+                    <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--foreground)' }}>
+                      {t('oven.setTemperature')}
+                    </span>
+                  </div>
+
+                  {/* Input */}
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex items-baseline gap-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        inputMode="numeric"
+                        value={ovenTempInput}
+                        onChange={(e) => setOvenTempInput(e.target.value.replace(/[^0-9]/g, ''))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSave();
+                          if (e.key === 'Escape') setShowOvenTempModal(false);
+                        }}
+                        style={{
+                          fontSize: '48px', fontWeight: 700,
+                          color: isValid || ovenTempInput === '' ? 'var(--foreground)' : '#FF3B30',
+                          background: 'transparent', border: 'none',
+                          borderBottom: `2px solid ${isValid || ovenTempInput === '' ? '#7C5CFF' : '#FF3B30'}`,
+                          outline: 'none', width: '100px',
+                          textAlign: 'center', lineHeight: 1,
+                          transition: 'color 150ms ease, border-color 150ms ease',
+                        }}
+                      />
+                      <span style={{
+                        fontSize: '20px', fontWeight: 600,
+                        color: isValid || ovenTempInput === '' ? '#7C5CFF' : '#FF3B30',
+                        transition: 'color 150ms ease',
+                      }}>
+                        {unit}
+                      </span>
+                    </div>
+
+                    {/* Range hint */}
+                    <p style={{
+                      fontSize: '12px', fontWeight: 500, textAlign: 'center',
+                      color: !isValid && ovenTempInput !== '' ? '#FF3B30' : 'var(--muted-foreground)',
+                      transition: 'color 150ms ease',
+                    }}>
+                      {t('oven.tempRangeHint', { min: `${minDisplay}${unit}`, max: `${maxDisplay}${unit}` })}
+                    </p>
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowOvenTempModal(false)}
+                      style={{
+                        flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                        backgroundColor: 'var(--muted)', color: 'var(--muted-foreground)',
+                        fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                      }}
+                      onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
+                      onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={!isValid}
+                      style={{
+                        flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                        background: isValid
+                          ? 'linear-gradient(135deg, #7C5CFF, #6B4FE0)'
+                          : 'var(--muted)',
+                        color: isValid ? '#FFFFFF' : 'var(--muted-foreground)',
+                        fontSize: '14px', fontWeight: 600,
+                        cursor: isValid ? 'pointer' : 'not-allowed',
+                        boxShadow: isValid ? '0 2px 8px rgba(124,92,255,0.3)' : 'none',
+                        opacity: isValid ? 1 : 0.5,
+                        transition: 'all 150ms ease',
+                      }}
+                      onMouseDown={(e) => { if (isValid) e.currentTarget.style.transform = 'scale(0.97)'; }}
+                      onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    >
+                      {t('common.save')}
+                    </button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+
+          {/* Timer Modal */}
+          {showOvenTimerModal && (() => {
+            const MIN_MIN = 1, MAX_MIN = 180;
+            const parsed = parseInt(ovenTimerInput, 10);
+            const isValid = !isNaN(parsed) && parsed >= MIN_MIN && parsed <= MAX_MIN;
+
+            const handleSave = () => {
+              if (!isValid) return;
+              updateDevice(device.id, { timerMinutes: parsed });
+              setShowOvenTimerModal(false);
+            };
+
+            return (
+              <>
+                {/* Backdrop */}
+                <div
+                  onClick={() => setShowOvenTimerModal(false)}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 60,
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    backdropFilter: 'blur(4px)',
+                  }}
+                />
+                {/* Modal */}
+                <div style={{
+                  position: 'fixed', zIndex: 61,
+                  top: '50%', left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: 'var(--card)',
+                  borderRadius: '20px',
+                  padding: '28px 24px 24px',
+                  width: '90vw', maxWidth: '320px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                  border: '1px solid var(--border)',
+                  display: 'flex', flexDirection: 'column', gap: '20px',
+                }}>
+                  {/* Title */}
+                  <div className="flex items-center gap-2">
+                    <Timer size={18} color="#7C5CFF" strokeWidth={1.5} />
+                    <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--foreground)' }}>
+                      {t('oven.setTimer')}
+                    </span>
+                  </div>
+
+                  {/* Input */}
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="flex items-baseline gap-2">
+                      <input
+                        autoFocus
+                        type="text"
+                        inputMode="numeric"
+                        value={ovenTimerInput}
+                        onChange={(e) => setOvenTimerInput(e.target.value.replace(/[^0-9]/g, ''))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSave();
+                          if (e.key === 'Escape') setShowOvenTimerModal(false);
+                        }}
+                        style={{
+                          fontSize: '48px', fontWeight: 700,
+                          color: isValid || ovenTimerInput === '' ? 'var(--foreground)' : '#FF3B30',
+                          background: 'transparent', border: 'none',
+                          borderBottom: `2px solid ${isValid || ovenTimerInput === '' ? '#7C5CFF' : '#FF3B30'}`,
+                          outline: 'none', width: '100px',
+                          textAlign: 'center', lineHeight: 1,
+                          transition: 'color 150ms ease, border-color 150ms ease',
+                        }}
+                      />
+                      <span style={{
+                        fontSize: '20px', fontWeight: 600,
+                        color: isValid || ovenTimerInput === '' ? 'var(--muted-foreground)' : '#FF3B30',
+                        transition: 'color 150ms ease',
+                      }}>
+                        min
+                      </span>
+                    </div>
+
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowOvenTimerModal(false)}
+                      style={{
+                        flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                        backgroundColor: 'var(--muted)', color: 'var(--muted-foreground)',
+                        fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                      }}
+                      onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
+                      onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={!isValid}
+                      style={{
+                        flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                        background: isValid
+                          ? 'linear-gradient(135deg, #7C5CFF, #6B4FE0)'
+                          : 'var(--muted)',
+                        color: isValid ? '#FFFFFF' : 'var(--muted-foreground)',
+                        fontSize: '14px', fontWeight: 600,
+                        cursor: isValid ? 'pointer' : 'not-allowed',
+                        boxShadow: isValid ? '0 2px 8px rgba(124,92,255,0.3)' : 'none',
+                        opacity: isValid ? 1 : 0.5,
+                        transition: 'all 150ms ease',
+                      }}
+                      onMouseDown={(e) => { if (isValid) e.currentTarget.style.transform = 'scale(0.97)'; }}
+                      onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    >
+                      {t('common.save')}
+                    </button>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </>
       )}
 

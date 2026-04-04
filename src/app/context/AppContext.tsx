@@ -1,5 +1,29 @@
-import React, { createContext, useContext, useState, useMemo, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useMemo, ReactNode, useEffect, useRef } from 'react';
 import { mockHomes, mockRoutines, Home, Room, Device, Routine } from '../data/mockData';
+import { Flame, DoorOpen, Zap, CalendarClock, Lightbulb, BatteryLow } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+export interface AppNotification {
+  id: string;
+  icon: LucideIcon;
+  iconColor: string;
+  title: string;
+  description: string;
+  time: string;
+  category: 'alert' | 'system' | 'activity';
+  read: boolean;
+}
+
+const initialNotifications: AppNotification[] = [
+  { id: 'n1', icon: DoorOpen, iconColor: '#FF3B30', title: 'Front Door Unlocked', description: 'The front door was unlocked at 3:42 PM', time: '2 min ago', category: 'alert', read: false },
+  { id: 'n2', icon: Flame, iconColor: '#FF9500', title: 'Oven Turned Off', description: 'Kitchen oven automatically turned off after 2 hours', time: '15 min ago', category: 'activity', read: false },
+  { id: 'n3', icon: Zap, iconColor: '#FF3B30', title: 'Unusual Energy Spike', description: 'Energy consumption 35% higher than normal this hour', time: '1 hr ago', category: 'alert', read: false },
+  { id: 'n4', icon: CalendarClock, iconColor: '#34C759', title: 'Routine Executed', description: '"Morning Routine" ran successfully at 8:00 AM', time: '3 hrs ago', category: 'system', read: true },
+  { id: 'n5', icon: Lightbulb, iconColor: '#FF9500', title: 'Light Left On', description: 'Living room lamp has been on for 6 hours', time: '4 hrs ago', category: 'alert', read: true },
+  { id: 'n6', icon: BatteryLow, iconColor: '#FF3B30', title: 'Low Battery', description: 'Door sensor battery at 12% — replace soon', time: '6 hrs ago', category: 'system', read: true },
+  { id: 'n7', icon: CalendarClock, iconColor: '#34C759', title: 'Routine Executed', description: '"Good Night" routine completed at 11:00 PM', time: '12 hrs ago', category: 'system', read: true },
+  { id: 'n8', icon: Zap, iconColor: '#7C5CFF', title: 'Weekly Energy Report', description: 'You used 5% less energy than last week', time: '1 day ago', category: 'system', read: true },
+];
 
 export interface Preferences {
   language: string;
@@ -10,6 +34,7 @@ export interface Preferences {
 interface AppState {
   homes: Home[];
   routines: Routine[];
+  notifications: AppNotification[];
   isLoggedIn: boolean;
   selectedHomeId: string | null;
   recentColors: string[];
@@ -22,6 +47,9 @@ interface AppState {
   setIsLoggedIn: (v: boolean) => void;
   setSelectedHomeId: (homeId: string) => void;
   addRecentColor: (color: string) => void;
+  addNotification: (n: Omit<AppNotification, 'id' | 'time' | 'read'>) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
   toggleDevice: (deviceId: string) => void;
   updateDevice: (deviceId: string, updates: Partial<Device>) => void;
   addRoutine: (routine: Omit<Routine, 'homeId' | 'isRunning'> & { homeId?: string; isRunning?: boolean }) => void;
@@ -101,8 +129,10 @@ function applyThemeVars(isDark: boolean) {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [homes, setHomes] = useState<Home[]>(mockHomes);
   const [routines, setRoutines] = useState<Routine[]>(mockRoutines);
+  const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
+  const ovenTimers = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
   
   // Initialize recent colors with default colors
   const defaultColors = ['#FFD700', '#FF6B35', '#FF3B30', '#7C5CFF', '#34C759', '#00C7FF', '#FFFFFF'];
@@ -351,20 +381,110 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addRecentColor = (color: string) => {
     setRecentColors((prev) => {
-      // Remove the color if it already exists (to move it to front)
       const filtered = prev.filter(c => c !== color);
-      // Add the new color to the beginning (leftmost position)
-      const newColors = [color, ...filtered];
-      // Keep only the first 7 colors (limit the list)
-      return newColors.slice(0, 7);
+      return [color, ...filtered].slice(0, 7);
     });
   };
+
+  const addNotification = (n: Omit<AppNotification, 'id' | 'time' | 'read'>) => {
+    setNotifications((prev) => [{
+      ...n,
+      id: `notif-${Date.now()}`,
+      time: 'Just now',
+      read: false,
+    }, ...prev]);
+  };
+
+  const markNotificationRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+  };
+
+  const markAllNotificationsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  // Oven countdown: watch for ON ovens with timerMinutes > 0 and manage intervals
+  useEffect(() => {
+    const allDevices = homes.flatMap((h) => h.rooms.flatMap((r) => r.devices));
+
+    allDevices.forEach((device) => {
+      const hasActiveTimer = device.type === 'oven' && device.isOn && (device.timerMinutes ?? 0) > 0;
+
+      if (hasActiveTimer && !ovenTimers.current.has(device.id)) {
+        // Start countdown for this device
+        const id = setInterval(() => {
+          let finished = false;
+          let finishedName = '';
+
+          setHomes((prev) => prev.map((home) => ({
+            ...home,
+            rooms: home.rooms.map((room) => ({
+              ...room,
+              devices: room.devices.map((d) => {
+                if (d.id !== device.id) return d;
+                const remaining = (d.timerMinutes ?? 0) - 1;
+                if (remaining <= 0) {
+                  finished = true;
+                  finishedName = d.name;
+                  return { ...d, isOn: false, timerMinutes: 0 };
+                }
+                return { ...d, timerMinutes: remaining };
+              }),
+            })),
+          })));
+
+          if (finished) {
+            clearInterval(ovenTimers.current.get(device.id)!);
+            ovenTimers.current.delete(device.id);
+            setNotifications((prev) => [{
+              id: `timer-${Date.now()}`,
+              icon: Flame,
+              iconColor: '#FF9500',
+              title: 'Oven Timer Finished',
+              description: `${finishedName} has been automatically turned off`,
+              time: 'Just now',
+              category: 'activity' as const,
+              read: false,
+            }, ...prev]);
+          }
+        }, 60000);
+
+        ovenTimers.current.set(device.id, id);
+      }
+
+      // Clear interval if device is off or timer was reset to 0
+      if (!hasActiveTimer && ovenTimers.current.has(device.id)) {
+        clearInterval(ovenTimers.current.get(device.id)!);
+        ovenTimers.current.delete(device.id);
+      }
+    });
+
+    // Cleanup intervals for devices no longer in state
+    ovenTimers.current.forEach((_, deviceId) => {
+      const still = allDevices.find(
+        (d) => d.id === deviceId && d.isOn && (d.timerMinutes ?? 0) > 0
+      );
+      if (!still) {
+        clearInterval(ovenTimers.current.get(deviceId)!);
+        ovenTimers.current.delete(deviceId);
+      }
+    });
+  }, [homes]);
+
+  // Cleanup all intervals on unmount
+  useEffect(() => {
+    return () => {
+      ovenTimers.current.forEach((id) => clearInterval(id));
+      ovenTimers.current.clear();
+    };
+  }, []);
 
   return (
     <AppContext.Provider
       value={{
         homes,
         routines,
+        notifications,
         isLoggedIn,
         selectedHomeId,
         recentColors,
@@ -376,6 +496,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsLoggedIn,
         setSelectedHomeId,
         addRecentColor,
+        addNotification,
+        markNotificationRead,
+        markAllNotificationsRead,
         toggleDevice,
         updateDevice,
         addRoutine,

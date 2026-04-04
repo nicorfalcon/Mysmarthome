@@ -23,6 +23,11 @@ export interface Device {
   dispensedUnit?: string;
   // Alarm-specific
   securityCode?: string;
+  // AC-specific
+  acMode?: string;
+  verticalVanes?: string;
+  horizontalVanes?: string;
+  acFanSpeed?: string;
 }
 
 export interface Room {
@@ -173,6 +178,10 @@ export const mockHomes: Home[] = [
             type: 'ac',
             isOn: true,
             temperature: 22,
+            acMode: 'cool',
+            verticalVanes: 'auto',
+            horizontalVanes: '0',
+            acFanSpeed: 'auto',
             roomId: 'room-1',
             lastActivity: '5 min ago',
             energyConsumption: 24.7,
@@ -201,9 +210,9 @@ export const mockHomes: Home[] = [
             type: 'oven',
             isOn: false,
             temperature: 180,
-            heatSource: 'conveccion',
+            heatSource: 'convencional',
             grillMode: 'apagado',
-            convectionMode: 'apagado',
+            convectionMode: 'convencional',
             timerMinutes: 18,
             roomId: 'room-2',
             lastActivity: '30 min ago',
@@ -357,6 +366,10 @@ export const mockHomes: Home[] = [
             type: 'ac',
             isOn: true,
             temperature: 24,
+            acMode: 'cool',
+            verticalVanes: 'auto',
+            horizontalVanes: '0',
+            acFanSpeed: 'auto',
             roomId: 'room-6',
             lastActivity: '10 min ago',
             energyConsumption: 22.3,

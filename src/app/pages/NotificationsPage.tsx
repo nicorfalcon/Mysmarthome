@@ -1,30 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, DoorOpen, Flame, Zap, CalendarClock, Lightbulb, BatteryLow } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from '../i18n/useTranslation';
-
-interface Notification {
-  id: string;
-  icon: LucideIcon;
-  iconColor: string;
-  title: string;
-  description: string;
-  time: string;
-  category: 'alert' | 'system' | 'activity';
-  read: boolean;
-}
-
-const initialNotifications: Notification[] = [
-  { id: 'n1', icon: DoorOpen, iconColor: '#FF3B30', title: 'Front Door Unlocked', description: 'The front door was unlocked at 3:42 PM', time: '2 min ago', category: 'alert', read: false },
-  { id: 'n2', icon: Flame, iconColor: '#FF9500', title: 'Oven Turned Off', description: 'Kitchen oven automatically turned off after 2 hours', time: '15 min ago', category: 'activity', read: false },
-  { id: 'n3', icon: Zap, iconColor: '#FF3B30', title: 'Unusual Energy Spike', description: 'Energy consumption 35% higher than normal this hour', time: '1 hr ago', category: 'alert', read: false },
-  { id: 'n4', icon: CalendarClock, iconColor: '#34C759', title: 'Routine Executed', description: '"Morning Routine" ran successfully at 8:00 AM', time: '3 hrs ago', category: 'system', read: true },
-  { id: 'n5', icon: Lightbulb, iconColor: '#FF9500', title: 'Light Left On', description: 'Living room lamp has been on for 6 hours', time: '4 hrs ago', category: 'alert', read: true },
-  { id: 'n6', icon: BatteryLow, iconColor: '#FF3B30', title: 'Low Battery', description: 'Door sensor battery at 12% — replace soon', time: '6 hrs ago', category: 'system', read: true },
-  { id: 'n7', icon: CalendarClock, iconColor: '#34C759', title: 'Routine Executed', description: '"Good Night" routine completed at 11:00 PM', time: '12 hrs ago', category: 'system', read: true },
-  { id: 'n8', icon: Zap, iconColor: '#7C5CFF', title: 'Weekly Energy Report', description: 'You used 5% less energy than last week', time: '1 day ago', category: 'system', read: true },
-];
+import { useApp } from '../context/AppContext';
 
 const filters = ['All', 'Alerts', 'System', 'Activity'] as const;
 type Filter = typeof filters[number];
@@ -32,20 +10,12 @@ type Filter = typeof filters[number];
 export function NotificationsPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const { notifications, markNotificationRead, markAllNotificationsRead } = useApp();
   const [activeFilter, setActiveFilter] = useState<Filter>('All');
 
   const filtered = activeFilter === 'All'
     ? notifications
     : notifications.filter((n) => n.category === activeFilter.toLowerCase());
-
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
-
-  const markRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
-  };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -62,7 +32,7 @@ export function NotificationsPage() {
           </h1>
         </div>
         {unreadCount > 0 && (
-          <button onClick={markAllRead} style={{ color: '#7C5CFF', fontSize: '13px', fontWeight: 500 }}>
+          <button onClick={markAllNotificationsRead} style={{ color: '#7C5CFF', fontSize: '13px', fontWeight: 500 }}>
             {t('notifications.markAllRead')}
           </button>
         )}
@@ -94,7 +64,7 @@ export function NotificationsPage() {
           return (
             <button
               key={n.id}
-              onClick={() => markRead(n.id)}
+              onClick={() => markNotificationRead(n.id)}
               className="flex items-start gap-3 text-left w-full"
               style={{
                 padding: '14px',
