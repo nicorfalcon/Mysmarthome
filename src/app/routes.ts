@@ -20,6 +20,8 @@ import { AccountSettingsPage } from './pages/AccountSettingsPage';
 import { UserInfoPage } from './pages/UserInfoPage';
 import { ActivityRedirect } from './pages/ActivityRedirect';
 import { AppPreferencesPage } from './pages/AppPreferencesPage';
+import { WebLayout } from './components/WebLayout';
+import { WebDashboardPage } from './pages/WebDashboardPage';
 
 export const router = createBrowserRouter([
   { path: '/', Component: LoginPage },

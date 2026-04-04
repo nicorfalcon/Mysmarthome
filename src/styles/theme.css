@@ -13,7 +13,7 @@
   --secondary: oklch(0.95 0.0058 264.53);
   --secondary-foreground: #030213;
   --muted: #3A3A44;
-  --muted-foreground: #B8B8C2;
+  --muted-foreground: #C4C4D0;
   --accent: #e9ebef;
   --accent-foreground: #030213;
   --destructive: #d4183d;
@@ -274,5 +274,24 @@
   .theme-shadow-lg {
     box-shadow: var(--shadow-lg);
     transition: box-shadow 0.3s ease;
+  }
+
+  /* Skip navigation link — shared by Layout and WebLayout */
+  .skip-nav {
+    position: absolute;
+    top: -100%;
+    left: 16px;
+    z-index: 9999;
+    padding: 8px 16px;
+    background: #7C5CFF;
+    color: #FFFFFF;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: top 0.15s ease;
+  }
+  .skip-nav:focus {
+    top: 16px;
   }
 }

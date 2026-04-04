@@ -1,0 +1,47 @@
+/* ═══════════════════════════════════════════════════════════
+   Web Layout Overrides
+   Scoped to .web-layout — never affects mobile prototype
+   ═══════════════════════════════════════════════════════════ */
+
+/* Enforce contrast-bumped muted foreground in web layout */
+.web-layout {
+  --muted-foreground: #C4C4D0;
+}
+[data-app-theme="light"] .web-layout {
+  --muted-foreground: #3C3C43;
+}
+
+/* ── Modal centering: convert bottom sheets to centered dialogs ── */
+.web-layout .fixed.items-end {
+  align-items: center !important;
+}
+.web-layout .fixed.items-end > div {
+  border-radius: 16px !important;
+  max-width: 480px;
+  width: 90%;
+}
+.web-layout .rounded-t-2xl {
+  border-radius: 16px !important;
+}
+
+/* ── Focus visible ring for keyboard navigation ── */
+.web-layout *:focus-visible {
+  outline: 2px solid #7C5CFF;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Hover states for device & room cards ── */
+.web-layout [class*="rounded-xl"]:hover,
+.web-layout [class*="rounded-2xl"]:hover {
+  border-color: rgba(124, 92, 255, 0.3) !important;
+  transition: border-color 150ms ease;
+}
+
+/* ── Ultra-wide max-width constraint ── */
+@media (min-width: 1440px) {
+  .web-layout .page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+}
