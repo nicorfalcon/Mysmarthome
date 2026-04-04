@@ -13,6 +13,16 @@ export interface Device {
   lastActivity: string;
   energyConsumption?: number; // in kWh
   isFavorite?: boolean;
+  // Oven-specific
+  heatSource?: string;
+  grillMode?: string;
+  convectionMode?: string;
+  timerMinutes?: number;
+  // Sprinkler/Faucet-specific
+  dispensedAmount?: number;
+  dispensedUnit?: string;
+  // Alarm-specific
+  securityCode?: string;
 }
 
 export interface Room {
@@ -191,6 +201,10 @@ export const mockHomes: Home[] = [
             type: 'oven',
             isOn: false,
             temperature: 180,
+            heatSource: 'conveccion',
+            grillMode: 'apagado',
+            convectionMode: 'apagado',
+            timerMinutes: 18,
             roomId: 'room-2',
             lastActivity: '30 min ago',
             energyConsumption: 8.6,
@@ -305,7 +319,8 @@ export const mockHomes: Home[] = [
             name: 'Alarm',
             type: 'alarm',
             isOn: true,
-            mode: 'Armed',
+            mode: 'Regular',
+            securityCode: '1234',
             roomId: 'room-5',
             lastActivity: '1 min ago',
             energyConsumption: 0.3,

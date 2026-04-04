@@ -1,6 +1,7 @@
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Pencil, Info, SkipBack, SkipForward, Play, Pause, Shuffle, Repeat, Volume, Volume2, Sun, SunDim, Plus, Minimize2, Maximize2, PanelLeftClose, PanelRightOpen } from 'lucide-react';
+import { ArrowLeft, Pencil, Info, SkipBack, SkipForward, Play, Pause, Shuffle, Repeat, Volume, Volume2, Sun, SunDim, Plus, Minimize2, Maximize2, PanelLeftClose, PanelRightOpen, Delete, Timer, Thermometer, RotateCw } from 'lucide-react';
+import { celsiusToFahrenheit } from '../utils/temperature';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { DeviceIcon } from '../components/DeviceIcon';
 import { CircularDial } from '../components/CircularDial';
@@ -39,6 +40,15 @@ export function DeviceControlPage() {
     message: string;
     onConfirm: () => void;
   } | null>(null);
+
+  // Alarm PIN state
+  const [pinDialogAction, setPinDialogAction] = useState<'activateHome' | 'activateRegular' | 'deactivate' | 'changePin' | null>(null);
+  const [pinDialogStep, setPinDialogStep] = useState<'current' | 'new'>('current');
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
+
+  // Sprinkler dispense state
+  const [dispensedAmount, setDispensedAmount] = useState(device?.dispensedAmount ?? 50);
 
   // Display recent colors in order (most recent first / leftmost)
   // If no recent colors, show default colors
@@ -88,7 +98,6 @@ export function DeviceControlPage() {
     const needsConfirmation =
       (device.type === 'oven' && newState) || // Turning on oven
       (device.type === 'fridge' && !newState) || // Turning off fridge
-      (device.type === 'alarm' && !newState) || // Deactivating alarm
       (device.type === 'door' && newState); // Unlocking door
 
     if (needsConfirmation) {
@@ -101,9 +110,6 @@ export function DeviceControlPage() {
       } else if (device.type === 'fridge' && !newState) {
         title = t('deviceControl.confirmFridgeOff');
         message = t('deviceControl.confirmFridgeOffMessage');
-      } else if (device.type === 'alarm' && !newState) {
-        title = t('deviceControl.confirmAlarmOff');
-        message = t('deviceControl.confirmAlarmOffMessage');
       } else if (device.type === 'door' && newState) {
         title = t('deviceControl.confirmDoorUnlock');
         message = t('deviceControl.confirmDoorUnlockMessage');
@@ -252,8 +258,8 @@ export function DeviceControlPage() {
           />
         </div>
 
-        {/* ON/OFF Toggle - hidden for curtains */}
-        {device.type !== 'curtains' && (
+        {/* ON/OFF Toggle - hidden for curtains and alarm */}
+        {device.type !== 'curtains' && device.type !== 'alarm' && (
           <button
             onClick={() => handleToggleWithConfirmation(!device.isOn)}
             className="px-10 py-3 rounded-full transition-all"
@@ -369,16 +375,212 @@ export function DeviceControlPage() {
         </>
       )}
 
-      {/* === AC / OVEN CONTROLS === */}
-      {(device.type === 'ac' || device.type === 'oven') && (
+      {/* === AC CONTROLS === */}
+      {device.type === 'ac' && (
         <CircularDial
-          value={device.temperature ?? (device.type === 'ac' ? 22 : 180)}
-          min={device.type === 'ac' ? 18 : 90}
-          max={device.type === 'ac' ? 38 : 230}
+          value={device.temperature ?? 22}
+          min={18}
+          max={38}
           onChange={(temp) => updateDevice(device.id, { temperature: temp })}
           label="Temperature"
           temperatureUnit={preferences.temperatureUnit}
         />
+      )}
+
+      {/* === OVEN CONTROLS === */}
+      {device.type === 'oven' && (
+        <>
+          {/* Heating Modes — 2 columnas */}
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            {/* Izquierda: Ventilación (Convección + Grill) */}
+            <div className="p-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <RotateCw size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
+                <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>
+                  {t('oven.fanModes')}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {[
+                  { label: t('oven.convection'), value: 'conveccion' },
+                  { label: t('oven.grill'), value: 'grill' },
+                ].map(({ label, value }) => (
+                  <button
+                    key={value}
+                    onClick={() => updateDevice(device.id, { heatSource: value })}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      backgroundColor: (device.heatSource ?? 'conveccion') === value ? '#7C5CFF' : 'var(--muted)',
+                      color: (device.heatSource ?? 'conveccion') === value ? '#FFFFFF' : '#B8B8C2',
+                      border: 'none',
+                      transition: 'all 150ms ease',
+                      textAlign: 'center' as const,
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Derecha: Resistencias (Convencional + Abajo + Arriba) */}
+            <div className="p-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <Thermometer size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
+                <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>
+                  {t('oven.elementModes')}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {[
+                  { label: t('oven.conventional'), value: 'convencional' },
+                  { label: t('oven.bottom'), value: 'abajo' },
+                  { label: t('oven.top'), value: 'arriba' },
+                ].map(({ label, value }) => (
+                  <button
+                    key={value}
+                    onClick={() => updateDevice(device.id, { heatSource: value })}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      backgroundColor: (device.heatSource ?? 'conveccion') === value ? '#7C5CFF' : 'var(--muted)',
+                      color: (device.heatSource ?? 'conveccion') === value ? '#FFFFFF' : '#B8B8C2',
+                      border: 'none',
+                      transition: 'all 150ms ease',
+                      textAlign: 'center' as const,
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.96)')}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Temperatura + Temporizador — 2 columnas */}
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            {/* Temperatura */}
+            <div
+              className="flex flex-col"
+              style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', padding: '16px' }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Thermometer size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
+                <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>
+                  {t('deviceControl.temperature')}
+                </span>
+              </div>
+              <div className="flex flex-col items-center flex-1 justify-center gap-4">
+                <div className="text-center">
+                  <span className="text-white" style={{ fontSize: '36px', fontWeight: 700, lineHeight: 1 }}>
+                    {preferences.temperatureUnit === 'fahrenheit'
+                      ? celsiusToFahrenheit(device.temperature ?? 180)
+                      : (device.temperature ?? 180)}
+                  </span>
+                  <span style={{ color: '#7C5CFF', fontSize: '15px', fontWeight: 600, marginLeft: '3px' }}>
+                    {preferences.temperatureUnit === 'fahrenheit' ? '°F' : '°C'}
+                  </span>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => updateDevice(device.id, { temperature: Math.max(90, (device.temperature ?? 180) - 10) })}
+                    className="flex items-center justify-center"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: 'var(--muted)', color: '#FFFFFF',
+                      fontSize: '20px', border: 'none',
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    −
+                  </button>
+                  <button
+                    onClick={() => updateDevice(device.id, { temperature: Math.min(230, (device.temperature ?? 180) + 10) })}
+                    className="flex items-center justify-center"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #7C5CFF, #6B4FE0)',
+                      boxShadow: '0 2px 8px rgba(124,92,255,0.3)',
+                      color: '#FFFFFF', fontSize: '20px', border: 'none',
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Temporizador */}
+            <div
+              className="flex flex-col"
+              style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', padding: '16px' }}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Timer size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
+                <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>
+                  {t('oven.timer')}
+                </span>
+              </div>
+              <div className="flex flex-col items-center flex-1 justify-center gap-4">
+                <div className="text-center">
+                  <span className="text-white" style={{ fontSize: '36px', fontWeight: 700, lineHeight: 1 }}>
+                    {device.timerMinutes ?? 18}
+                  </span>
+                  <span style={{ color: 'var(--muted-foreground)', fontSize: '15px', fontWeight: 500, marginLeft: '4px' }}>
+                    min
+                  </span>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => updateDevice(device.id, { timerMinutes: Math.max(0, (device.timerMinutes ?? 18) - 5) })}
+                    className="flex items-center justify-center"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      backgroundColor: 'var(--muted)', color: '#FFFFFF',
+                      fontSize: '20px', border: 'none',
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    −
+                  </button>
+                  <button
+                    onClick={() => updateDevice(device.id, { timerMinutes: Math.min(240, (device.timerMinutes ?? 18) + 5) })}
+                    className="flex items-center justify-center"
+                    style={{
+                      width: '36px', height: '36px', borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #7C5CFF, #6B4FE0)',
+                      boxShadow: '0 2px 8px rgba(124,92,255,0.3)',
+                      color: '#FFFFFF', fontSize: '20px', border: 'none',
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* === CURTAINS CONTROLS === */}
@@ -662,40 +864,152 @@ export function DeviceControlPage() {
         </div>
       )}
 
-      {/* === ALARM CONTROLS === */}
-      {device.type === 'alarm' && (
+      {/* === SPRINKLER / FAUCET CONTROLS === */}
+      {device.type === 'sprinkler' && (
         <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
           <p className="text-white mb-3" style={{ fontSize: '14px', fontWeight: 500 }}>
-            {t('deviceControl.alarmMode')}
+            {t('deviceControl.dispense')}
           </p>
-          <div className="flex gap-3">
-            {[{ label: t('deviceStatus.armed'), value: 'Armed' }, { label: t('deviceStatus.disarmed'), value: 'Disarmed' }].map(({ label, value: mode }) => (
+          {/* Amount slider */}
+          <div className="flex items-center justify-between mb-2">
+            <p style={{ color: 'var(--muted-foreground)', fontSize: '13px' }}>{t('deviceControl.dispensedUnit')}</p>
+            <p style={{ color: '#7C5CFF', fontSize: '14px', fontWeight: 500 }}>{dispensedAmount}</p>
+          </div>
+          <div
+            className="relative w-full cursor-pointer overflow-hidden mb-4"
+            style={{ height: '28px', backgroundColor: 'var(--background)', borderRadius: '4px' }}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              (e.target as HTMLElement).setPointerCapture(e.pointerId);
+              const rect = e.currentTarget.getBoundingClientRect();
+              const val = Math.round(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * 100);
+              setDispensedAmount(val);
+              updateDevice(device.id, { dispensedAmount: val });
+            }}
+            onPointerMove={(e) => {
+              if (e.buttons > 0) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const val = Math.round(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * 100);
+                setDispensedAmount(val);
+                updateDevice(device.id, { dispensedAmount: val });
+              }
+            }}
+          >
+            <div
+              className="absolute top-0 left-0 h-full"
+              style={{
+                width: `${dispensedAmount}%`,
+                background: 'linear-gradient(90deg, #7C5CFF, #9B84FF)',
+                transition: 'width 50ms ease',
+                borderRadius: '4px 0 0 4px',
+              }}
+            />
+          </div>
+          {/* Unit selector */}
+          <div className="flex gap-2">
+            {['ml', 'cl', 'dl', 'l'].map((unit) => (
               <button
-                key={mode}
-                onClick={() => {
-                  if (mode === 'Disarmed' && device.isOn) {
-                    // Trying to disarm when armed - needs confirmation
-                    handleToggleWithConfirmation(false);
-                  } else {
-                    updateDevice(device.id, {
-                      mode,
-                      isOn: mode === 'Armed',
-                    });
-                  }
+                key={unit}
+                onClick={() => updateDevice(device.id, { dispensedUnit: unit })}
+                className="flex-1 py-2 rounded-xl transition-all"
+                style={{
+                  backgroundColor: (device.dispensedUnit ?? 'ml') === unit ? '#7C5CFF' : 'var(--muted)',
+                  color: '#fff',
+                  fontSize: '13px',
+                  fontWeight: 500,
                 }}
+              >
+                {unit}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* === ALARM CONTROLS === */}
+      {device.type === 'alarm' && (
+        <>
+          {/* Status card */}
+          <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+            <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              {t('alarm.status')}
+            </p>
+            <p style={{
+              fontSize: '16px',
+              fontWeight: 600,
+              color: device.isOn ? (device.mode === 'Home' ? '#34C759' : '#FF9500') : '#B8B8C2',
+            }}>
+              {!device.isOn
+                ? t('alarm.statusDisarmed')
+                : device.mode === 'Home'
+                  ? t('alarm.statusHome')
+                  : t('alarm.statusRegular')}
+            </p>
+          </div>
+
+          {/* Activate buttons */}
+          <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+            <p className="text-white mb-3" style={{ fontSize: '14px', fontWeight: 500 }}>
+              {t('alarm.activate')}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setPinDialogAction('activateHome'); setPinDialogStep('current'); setPinInput(''); setPinError(''); }}
                 className="flex-1 py-3 rounded-xl transition-all"
                 style={{
-                  backgroundColor: device.mode === mode ? '#7C5CFF' : 'var(--muted)',
+                  backgroundColor: (device.isOn && device.mode === 'Home') ? '#34C759' : 'var(--muted)',
                   color: '#fff',
                   fontSize: '14px',
                   fontWeight: 500,
                 }}
               >
-                {label}
+                {t('alarm.modeHome')}
               </button>
-            ))}
+              <button
+                onClick={() => { setPinDialogAction('activateRegular'); setPinDialogStep('current'); setPinInput(''); setPinError(''); }}
+                className="flex-1 py-3 rounded-xl transition-all"
+                style={{
+                  backgroundColor: (device.isOn && device.mode === 'Regular') ? '#FF9500' : 'var(--muted)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                {t('alarm.modeRegular')}
+              </button>
+            </div>
           </div>
-        </div>
+
+          {/* Deactivate + Change PIN */}
+          <div className="flex gap-3 mb-3">
+            <button
+              onClick={() => { setPinDialogAction('deactivate'); setPinDialogStep('current'); setPinInput(''); setPinError(''); }}
+              className="flex-1 py-3 rounded-xl transition-all"
+              style={{
+                backgroundColor: 'var(--card)',
+                color: device.isOn ? '#FF3B30' : '#6A6A75',
+                fontSize: '14px',
+                fontWeight: 600,
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              {t('alarm.deactivate')}
+            </button>
+            <button
+              onClick={() => { setPinDialogAction('changePin'); setPinDialogStep('current'); setPinInput(''); setPinError(''); }}
+              className="flex-1 py-3 rounded-xl transition-all"
+              style={{
+                backgroundColor: 'var(--card)',
+                color: '#B8B8C2',
+                fontSize: '14px',
+                fontWeight: 500,
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              {t('alarm.changePin')}
+            </button>
+          </div>
+        </>
       )}
 
       {/* === VACUUM CONTROLS === */}
@@ -814,6 +1128,137 @@ export function DeviceControlPage() {
           onColorConfirm={handleColorConfirm}
           onClose={() => setShowColorPicker(false)}
         />
+      )}
+
+      {/* PIN Dialog */}
+      {pinDialogAction !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+          onClick={() => { setPinDialogAction(null); setPinInput(''); setPinError(''); }}
+        >
+          <div
+            className="w-full rounded-t-3xl p-6"
+            style={{ backgroundColor: 'var(--background)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p style={{ color: '#fff', fontSize: '18px', fontWeight: 600, textAlign: 'center', marginBottom: '4px' }}>
+              {pinDialogAction === 'activateHome' ? t('alarm.modeHome')
+                : pinDialogAction === 'activateRegular' ? t('alarm.modeRegular')
+                : pinDialogAction === 'deactivate' ? t('alarm.deactivate')
+                : t('alarm.changePin')}
+            </p>
+            <p style={{ color: 'var(--muted-foreground)', fontSize: '14px', textAlign: 'center', marginBottom: '24px' }}>
+              {pinDialogAction === 'changePin' && pinDialogStep === 'new' ? t('alarm.newPin') : t('alarm.enterPin')}
+            </p>
+
+            {/* PIN dots */}
+            <div className="flex justify-center gap-5 mb-4">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    backgroundColor: pinInput.length > i ? '#7C5CFF' : 'var(--muted)',
+                    transition: 'background-color 0.15s',
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Error */}
+            <div style={{ minHeight: '20px', textAlign: 'center', marginBottom: '16px' }}>
+              {pinError && (
+                <p style={{ color: '#FF3B30', fontSize: '13px' }}>{pinError}</p>
+              )}
+            </div>
+
+            {/* Numpad */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', maxWidth: '260px', margin: '0 auto 24px' }}>
+              {['1','2','3','4','5','6','7','8','9','','0','del'].map((key) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    if (key === '') return;
+                    if (key === 'del') {
+                      setPinInput((p) => p.slice(0, -1));
+                      setPinError('');
+                      return;
+                    }
+                    if (pinInput.length >= 4) return;
+                    const next = pinInput + key;
+                    setPinInput(next);
+                    setPinError('');
+                    if (next.length === 4) {
+                      // Validate
+                      const code = device.securityCode ?? '1234';
+                      if (pinDialogAction === 'changePin') {
+                        if (pinDialogStep === 'current') {
+                          if (next === code) {
+                            setPinDialogStep('new');
+                            setPinInput('');
+                          } else {
+                            setPinError(t('alarm.wrongPin'));
+                            setPinInput('');
+                          }
+                        } else {
+                          updateDevice(device.id, { securityCode: next });
+                          setPinDialogAction(null);
+                          setPinInput('');
+                        }
+                      } else {
+                        if (next === code) {
+                          if (pinDialogAction === 'activateHome') updateDevice(device.id, { isOn: true, mode: 'Home' });
+                          else if (pinDialogAction === 'activateRegular') updateDevice(device.id, { isOn: true, mode: 'Regular' });
+                          else if (pinDialogAction === 'deactivate') updateDevice(device.id, { isOn: false, mode: 'Disarmed' });
+                          setPinDialogAction(null);
+                          setPinInput('');
+                        } else {
+                          setPinError(t('alarm.wrongPin'));
+                          setPinInput('');
+                        }
+                      }
+                    }
+                  }}
+                  style={{
+                    height: '56px',
+                    borderRadius: '14px',
+                    backgroundColor: key === '' ? 'transparent' : key === 'del' ? 'var(--card)' : 'var(--card)',
+                    color: key === 'del' ? '#B8B8C2' : '#fff',
+                    fontSize: key === 'del' ? '12px' : '20px',
+                    fontWeight: 600,
+                    cursor: key === '' ? 'default' : 'pointer',
+                    border: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {key === 'del' ? '⌫' : key}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => { setPinDialogAction(null); setPinInput(''); setPinError(''); }}
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '14px',
+                backgroundColor: 'var(--card)',
+                color: '#B8B8C2',
+                fontSize: '15px',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Confirmation Dialog */}

@@ -10,6 +10,10 @@ interface CircularDialProps {
   label?: string;
   /** Pass 'fahrenheit' to display temperatures in °F while keeping internal values in °C */
   temperatureUnit?: 'celsius' | 'fahrenheit';
+  /** Arc color (default: #7C5CFF) */
+  arcColor?: string;
+  /** Preset values in Celsius to show as quick-select chips below the dial */
+  presets?: number[];
 }
 
 // Conversion helpers
@@ -24,6 +28,8 @@ export function CircularDial({
   unit = '°',
   label,
   temperatureUnit = 'celsius',
+  arcColor = '#7C5CFF',
+  presets,
 }: CircularDialProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -194,11 +200,11 @@ export function CircularDial({
         >
           <defs>
             <linearGradient id="dialGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#7C5CFF" />
-              <stop offset="100%" stopColor="#9B84FF" />
+              <stop offset="0%" stopColor={arcColor} />
+              <stop offset="100%" stopColor={arcColor} stopOpacity="0.8" />
             </linearGradient>
             <filter id="handleGlow">
-              <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="#7C5CFF" floodOpacity="0.6" />
+              <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={arcColor} floodOpacity="0.6" />
             </filter>
           </defs>
 
@@ -239,7 +245,7 @@ export function CircularDial({
             cx={handlePos.x}
             cy={handlePos.y}
             r="5"
-            fill="#7C5CFF"
+            fill={arcColor}
             style={{
               transition: isDragging ? 'none' : 'cx 150ms ease, cy 150ms ease',
             }}
@@ -264,6 +270,76 @@ export function CircularDial({
           </text>
         </svg>
       </div>
+
+      {/* Preset chips + +/- buttons */}
+      {presets && presets.length > 0 && (
+        <div className="mt-1">
+          {/* Preset chips */}
+          <div className="flex justify-center gap-2 mb-4">
+            {presets.map((preset) => {
+              const displayPreset = isFahrenheit ? cToF(preset) : preset;
+              const isActive = value === preset;
+              return (
+                <button
+                  key={preset}
+                  onClick={() => onChange(preset)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '20px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    backgroundColor: isActive ? arcColor : 'var(--muted)',
+                    color: isActive ? '#FFFFFF' : '#B8B8C2',
+                    border: 'none',
+                    transition: 'all 150ms ease',
+                  }}
+                >
+                  {displayPreset}{displayUnit}
+                </button>
+              );
+            })}
+          </div>
+          {/* +/- buttons */}
+          <div className="flex justify-center gap-6">
+            <button
+              onClick={() => onChange(Math.max(min, value - 5))}
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--muted)',
+                color: '#FFFFFF',
+                fontSize: '22px',
+                fontWeight: 400,
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              −
+            </button>
+            <button
+              onClick={() => onChange(Math.min(max, value + 5))}
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: arcColor,
+                color: '#FFFFFF',
+                fontSize: '22px',
+                fontWeight: 400,
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              +
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Temperature Input Dialog */}
       <Dialog open={showInputDialog} onOpenChange={setShowInputDialog}>

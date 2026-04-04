@@ -9,7 +9,7 @@ export function GlobalDevicesPage() {
   const { homes, activeHome, activeRooms, activeDevices, preferences, toggleFavorite } = useApp();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [categoryFilter, setCategoryFilter] = useState<'favorites' | 'all'>('favorites');
+  const [favoriteFilter, setFavoriteFilter] = useState(false);
   const [roomFilter, setRoomFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [showRoomDropdown, setShowRoomDropdown] = useState(false);
@@ -17,17 +17,13 @@ export function GlobalDevicesPage() {
 
   const deviceTypes = [...new Set(activeDevices.map((d) => d.type))];
 
-  let filtered = activeDevices;
-  if (categoryFilter === 'favorites') {
-    filtered = filtered.filter((d) => d.isFavorite);
-  } else {
-    if (roomFilter !== 'all') {
-      filtered = filtered.filter((d) => d.roomId === roomFilter);
-    }
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter((d) => d.type === typeFilter);
-    }
-  }
+  // Always sort favorites first, then apply filters
+  let filtered = [...activeDevices].sort((a, b) =>
+    (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0)
+  );
+  if (favoriteFilter) filtered = filtered.filter((d) => d.isFavorite);
+  if (roomFilter !== 'all') filtered = filtered.filter((d) => d.roomId === roomFilter);
+  if (typeFilter !== 'all') filtered = filtered.filter((d) => d.type === typeFilter);
 
   const getRoomName = (roomId: string) => {
     return activeRooms.find((r) => r.id === roomId)?.name ?? '';
@@ -61,155 +57,79 @@ export function GlobalDevicesPage() {
         </div>
       </div>
 
-      {/* Category Chips */}
-      <div className="category-chips">
+      {/* Filters */}
+      <div className="filters-row">
+        {/* Favorites chip */}
         <button
-          onClick={() => setCategoryFilter('favorites')}
+          onClick={() => setFavoriteFilter(!favoriteFilter)}
           className="chip-btn flex items-center gap-1.5"
           style={{
-            backgroundColor: categoryFilter === 'favorites' ? '#7C5CFF' : 'var(--card)',
-            color: categoryFilter === 'favorites' ? '#fff' : 'var(--muted-foreground)',
-            boxShadow: categoryFilter === 'favorites' ? '0 2px 8px rgba(124,92,255,0.35)' : 'var(--shadow-sm)',
+            backgroundColor: favoriteFilter ? '#7C5CFF' : 'var(--card)',
+            color: favoriteFilter ? '#fff' : 'var(--muted-foreground)',
+            boxShadow: favoriteFilter ? '0 2px 8px rgba(124,92,255,0.35)' : 'var(--shadow-sm)',
+            flexShrink: 0,
           }}
         >
           <Star
             size={13}
-            color={categoryFilter === 'favorites' ? '#FFD60A' : 'var(--muted-foreground)'}
-            fill={categoryFilter === 'favorites' ? '#FFD60A' : 'none'}
+            color={favoriteFilter ? '#FFD60A' : 'var(--muted-foreground)'}
+            fill={favoriteFilter ? '#FFD60A' : 'none'}
           />
           Favorites
         </button>
-        <button
-          onClick={() => setCategoryFilter('all')}
-          className="chip-btn"
-          style={{
-            backgroundColor: categoryFilter === 'all' ? '#7C5CFF' : 'var(--card)',
-            color: categoryFilter === 'all' ? '#fff' : 'var(--muted-foreground)',
-            boxShadow: categoryFilter === 'all' ? '0 2px 8px rgba(124,92,255,0.35)' : 'var(--shadow-sm)',
-          }}
-        >
-          All Devices
-        </button>
-      </div>
 
-      {/* Filters — only visible in All mode */}
-      {categoryFilter === 'all' && (
-        <div className="filter-grid">
-          {/* Room filter */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowRoomDropdown(!showRoomDropdown);
-                setShowTypeDropdown(false);
-              }}
-              className="w-full flex items-center justify-between transition-all"
-              style={{
-                backgroundColor: 'var(--card)',
-                border: 'none',
-                borderRadius: '12px',
-                boxShadow: 'var(--shadow-sm)',
-                padding: '10px 12px',
-                height: '40px',
-              }}
-            >
-              <span style={{ color: 'var(--muted-foreground)', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {roomFilter === 'all' ? t('common.allRooms') : getRoomName(roomFilter)}
-              </span>
-              <ChevronDown size={16} color="var(--muted-foreground)" style={{ flexShrink: 0, marginLeft: '4px' }} />
-            </button>
-            {showRoomDropdown && (
-              <div
-                className="absolute top-full left-0 right-0 mt-1 overflow-hidden z-10"
-                style={{ backgroundColor: 'var(--card)', border: 'none', borderRadius: '12px', boxShadow: 'var(--shadow-lg)' }}
-              >
-                <button
-                  onClick={() => { setRoomFilter('all'); setShowRoomDropdown(false); }}
-                  className="w-full text-left px-4 py-2.5"
-                  style={{
-                    color: roomFilter === 'all' ? '#7C5CFF' : 'var(--muted-foreground)',
-                    fontSize: '13px',
-                    borderBottom: '1px solid var(--muted)',
-                  }}
-                >
-                  {t('common.allRooms')}
+        {/* Room filter */}
+        <div className="relative flex-1">
+          <button
+            onClick={() => { setShowRoomDropdown(!showRoomDropdown); setShowTypeDropdown(false); }}
+            className="w-full flex items-center justify-between transition-all"
+            style={{ backgroundColor: 'var(--card)', border: 'none', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', padding: '10px 12px', height: '40px' }}
+          >
+            <span style={{ color: roomFilter !== 'all' ? '#7C5CFF' : 'var(--muted-foreground)', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {roomFilter === 'all' ? t('common.allRooms') : getRoomName(roomFilter)}
+            </span>
+            <ChevronDown size={16} color="var(--muted-foreground)" style={{ flexShrink: 0, marginLeft: '4px' }} />
+          </button>
+          {showRoomDropdown && (
+            <div className="absolute top-full left-0 right-0 mt-1 overflow-hidden z-50" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-lg)' }}>
+              <button onClick={() => { setRoomFilter('all'); setShowRoomDropdown(false); }} className="w-full text-left px-4 py-2.5" style={{ color: roomFilter === 'all' ? '#7C5CFF' : 'var(--muted-foreground)', fontSize: '13px', borderBottom: '1px solid var(--muted)' }}>
+                {t('common.allRooms')}
+              </button>
+              {activeRooms.map((room) => (
+                <button key={room.id} onClick={() => { setRoomFilter(room.id); setShowRoomDropdown(false); }} className="w-full text-left px-4 py-2.5" style={{ color: roomFilter === room.id ? '#7C5CFF' : 'var(--muted-foreground)', fontSize: '13px', borderBottom: '1px solid var(--muted)' }}>
+                  {room.name}
                 </button>
-                {activeRooms.map((room) => (
-                  <button
-                    key={room.id}
-                    onClick={() => { setRoomFilter(room.id); setShowRoomDropdown(false); }}
-                    className="w-full text-left px-4 py-2.5"
-                    style={{
-                      color: roomFilter === room.id ? '#7C5CFF' : 'var(--muted-foreground)',
-                      fontSize: '13px',
-                      borderBottom: '1px solid var(--muted)',
-                    }}
-                  >
-                    {room.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Type filter */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowTypeDropdown(!showTypeDropdown);
-                setShowRoomDropdown(false);
-              }}
-              className="w-full flex items-center justify-between transition-all"
-              style={{
-                backgroundColor: 'var(--card)',
-                border: 'none',
-                borderRadius: '12px',
-                boxShadow: 'var(--shadow-sm)',
-                padding: '10px 12px',
-                height: '40px',
-              }}
-            >
-              <span style={{ color: 'var(--muted-foreground)', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {typeFilter === 'all'
-                  ? t('common.allTypes')
-                  : t(`deviceType.${typeFilter}` as any)}
-              </span>
-              <ChevronDown size={16} color="var(--muted-foreground)" style={{ flexShrink: 0, marginLeft: '4px' }} />
-            </button>
-            {showTypeDropdown && (
-              <div
-                className="absolute top-full left-0 right-0 mt-1 overflow-hidden z-10"
-                style={{ backgroundColor: 'var(--card)', border: 'none', borderRadius: '12px', boxShadow: 'var(--shadow-lg)' }}
-              >
-                <button
-                  onClick={() => { setTypeFilter('all'); setShowTypeDropdown(false); }}
-                  className="w-full text-left px-4 py-2.5"
-                  style={{
-                    color: typeFilter === 'all' ? '#7C5CFF' : 'var(--muted-foreground)',
-                    fontSize: '13px',
-                    borderBottom: '1px solid var(--muted)',
-                  }}
-                >
-                  {t('common.allTypes')}
-                </button>
-                {deviceTypes.map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => { setTypeFilter(type); setShowTypeDropdown(false); }}
-                    className="w-full text-left px-4 py-2.5"
-                    style={{
-                      color: typeFilter === type ? '#7C5CFF' : 'var(--muted-foreground)',
-                      fontSize: '13px',
-                      borderBottom: '1px solid var(--muted)',
-                    }}
-                  >
-                    {t(`deviceType.${type}` as any)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Type filter */}
+        <div className="relative flex-1">
+          <button
+            onClick={() => { setShowTypeDropdown(!showTypeDropdown); setShowRoomDropdown(false); }}
+            className="w-full flex items-center justify-between transition-all"
+            style={{ backgroundColor: 'var(--card)', border: 'none', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', padding: '10px 12px', height: '40px' }}
+          >
+            <span style={{ color: typeFilter !== 'all' ? '#7C5CFF' : 'var(--muted-foreground)', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {typeFilter === 'all' ? t('common.allTypes') : t(`deviceType.${typeFilter}` as any)}
+            </span>
+            <ChevronDown size={16} color="var(--muted-foreground)" style={{ flexShrink: 0, marginLeft: '4px' }} />
+          </button>
+          {showTypeDropdown && (
+            <div className="absolute top-full left-0 right-0 mt-1 overflow-hidden z-50" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-lg)' }}>
+              <button onClick={() => { setTypeFilter('all'); setShowTypeDropdown(false); }} className="w-full text-left px-4 py-2.5" style={{ color: typeFilter === 'all' ? '#7C5CFF' : 'var(--muted-foreground)', fontSize: '13px', borderBottom: '1px solid var(--muted)' }}>
+                {t('common.allTypes')}
+              </button>
+              {deviceTypes.map((type) => (
+                <button key={type} onClick={() => { setTypeFilter(type); setShowTypeDropdown(false); }} className="w-full text-left px-4 py-2.5" style={{ color: typeFilter === type ? '#7C5CFF' : 'var(--muted-foreground)', fontSize: '13px', borderBottom: '1px solid var(--muted)' }}>
+                  {t(`deviceType.${type}` as any)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Device Grid */}
       {filtered.length > 0 ? (
@@ -317,7 +237,7 @@ export function GlobalDevicesPage() {
         </div>
       ) : (
         <>
-          {categoryFilter === 'favorites' ? (
+          {favoriteFilter ? (
             /* Favorites empty state */
             <div
               className="flex flex-col items-center justify-center"
@@ -337,7 +257,6 @@ export function GlobalDevicesPage() {
               </p>
             </div>
           ) : (
-            /* All-mode empty states */
             <>
               {activeDevices.length === 0 && roomFilter === 'all' && typeFilter === 'all' ? (
                 <>
@@ -436,15 +355,12 @@ export function GlobalDevicesPage() {
           max-width: 100%;
         }
 
-        .category-chips {
+        .filters-row {
           display: flex;
+          align-items: center;
           gap: 8px;
-          margin-bottom: 12px;
-          overflow-x: auto;
-          scrollbar-width: none;
-          -ms-overflow-style: none;
+          margin-bottom: 16px;
         }
-        .category-chips::-webkit-scrollbar { display: none; }
 
         .chip-btn {
           display: inline-flex;
@@ -458,13 +374,7 @@ export function GlobalDevicesPage() {
           white-space: nowrap;
           cursor: pointer;
           transition: background-color 200ms ease, color 200ms ease, box-shadow 200ms ease;
-        }
-
-        .filter-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-          margin-bottom: 16px;
+          height: 40px;
         }
 
         .device-grid {

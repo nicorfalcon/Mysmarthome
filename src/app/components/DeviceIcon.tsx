@@ -47,6 +47,7 @@ const deviceIconMap: Record<string, LucideIcon> = {
   speaker: Speaker,
   door: DoorOpen,
   fridge: Refrigerator,
+  alarm: ShieldAlert,
 };
 
 const roomIconMap: Record<string, LucideIcon> = {
@@ -201,7 +202,9 @@ export function getDeviceRichStatus(
     case 'vacuum':
       return { primary: device.mode ?? 'Cleaning' };
     case 'alarm':
-      return { primary: device.mode ?? 'Armed' };
+      if (device.mode === 'Home') return { primary: 'Home Mode' };
+      if (device.mode === 'Regular') return { primary: 'Regular Mode' };
+      return { primary: 'Armed' };
     case 'sprinkler':
       return { primary: 'Active' };
     default:
