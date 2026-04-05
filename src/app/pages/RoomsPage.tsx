@@ -55,11 +55,16 @@ export function RoomsPage() {
   const [newType, setNewType] = useState('bedroom');
   const [inlineEditNames, setInlineEditNames] = useState<Record<string, string>>({});
   const [showIconSelector, setShowIconSelector] = useState<string | null>(null);
+  const [nameError, setNameError] = useState(false);
 
   if (!home) return null;
 
   const handleAdd = () => {
-    if (!newName.trim() || !activeHomeId) return;
+    if (!newName.trim()) {
+      setNameError(true);
+      return;
+    }
+    if (!activeHomeId) return;
     addRoom(activeHomeId, {
       id: `room-${Date.now()}`,
       name: newName.trim(),
@@ -69,6 +74,7 @@ export function RoomsPage() {
     });
     setNewName('');
     setNewType('bedroom');
+    setNameError(false);
     setShowAddModal(false);
   };
 
@@ -333,17 +339,20 @@ export function RoomsPage() {
 
       {/* Add Room Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-30 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddModal(false)}>
+        <div className="fixed inset-0 z-30 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => { setShowAddModal(false); setNameError(false); }}>
           <div className="w-full max-w-md rounded-t-2xl p-5" style={{ backgroundColor: 'var(--background)' }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <p className="text-white" style={{ fontSize: '18px', fontWeight: 600 }}>{t('rooms.addRoom')}</p>
-              <button onClick={() => setShowAddModal(false)}><X size={20} color="var(--muted-foreground)" /></button>
+              <button onClick={() => { setShowAddModal(false); setNameError(false); }}><X size={20} color="var(--muted-foreground)" /></button>
             </div>
             <div className="mb-4">
               <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', marginBottom: '8px' }}>{t('rooms.roomName')}</p>
-              <input type="text" placeholder="e.g. Guest Room" value={newName} onChange={(e) => setNewName(e.target.value)}
+              <input type="text" placeholder="e.g. Guest Room" value={newName} onChange={(e) => { setNewName(e.target.value); if (nameError) setNameError(false); }}
                 className="w-full bg-transparent text-white outline-none px-4 py-3 rounded-xl"
-                style={{ backgroundColor: 'var(--card)', border: '1px solid var(--muted)', fontSize: '14px' }} />
+                style={{ backgroundColor: 'var(--card)', border: `1px solid ${nameError ? '#FF3B30' : 'var(--muted)'}`, fontSize: '14px' }} />
+              {nameError && (
+                <p style={{ color: '#FF3B30', fontSize: '12px', marginTop: '6px' }}>Room name is required.</p>
+              )}
             </div>
             <div className="mb-6">
               <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', marginBottom: '8px' }}>{t('rooms.selectIcon')}</p>
@@ -371,7 +380,7 @@ export function RoomsPage() {
               </div>
             </div>
             <button onClick={handleAdd} className="w-full py-3.5 rounded-xl"
-              style={{ background: newName.trim() ? 'linear-gradient(135deg, #7C5CFF, #6B4FE0)' : 'var(--muted)', color: '#fff', fontSize: '16px', fontWeight: 600 }}>
+              style={{ background: 'linear-gradient(135deg, #7C5CFF, #6B4FE0)', color: '#fff', fontSize: '16px', fontWeight: 600 }}>
               {t('rooms.addRoom')}
             </button>
           </div>

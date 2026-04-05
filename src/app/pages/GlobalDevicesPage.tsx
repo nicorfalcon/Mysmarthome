@@ -142,6 +142,10 @@ export function GlobalDevicesPage() {
                 <div
                   onClick={() => navigate(getDevicePath(device.id))}
                   className="relative flex flex-col justify-between text-left"
+                  aria-label={`${device.name} — ${device.isOn ? 'On' : 'Off'}`}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(getDevicePath(device.id)); } }}
                   style={{
                     aspectRatio: '1 / 1',
                     background: device.isOn
@@ -208,6 +212,8 @@ export function GlobalDevicesPage() {
                     e.stopPropagation();
                     toggleFavorite(device.id);
                   }}
+                  aria-label={`${device.isFavorite ? 'Remove from' : 'Add to'} favorites: ${device.name}`}
+                  aria-pressed={!!device.isFavorite}
                   className="absolute flex items-center justify-center"
                   style={{
                     bottom: '12px',

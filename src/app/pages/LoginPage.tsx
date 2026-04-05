@@ -31,7 +31,7 @@ export function LoginPage() {
 
   return (
     <MobileFrame>
-      <div className="flex flex-col flex-1 px-8 justify-center items-center">
+      <div className="flex flex-col flex-1 px-8 justify-center items-center login-card">
         {/* Logo */}
         <h1 className="mb-6 text-3xl font-bold" style={{ color: 'var(--primary)' }}>
           My Smart Home
@@ -135,7 +135,31 @@ export function LoginPage() {
         >
           Create account
         </button>
+
+        {/* Web version link */}
+        <button
+          onClick={() => navigate('/web')}
+          className="mt-6 transition-all"
+          style={{ color: 'var(--muted-foreground)', fontSize: '13px' }}
+          onMouseOver={(e) => (e.currentTarget.style.color = '#7C5CFF')}
+          onMouseOut={(e) => (e.currentTarget.style.color = 'var(--muted-foreground)')}
+        >
+          Use web version →
+        </button>
       </div>
+
+      <style>{`
+        @media (min-width: 1024px) {
+          .login-card {
+            max-width: 440px;
+            background: var(--card);
+            border-radius: 24px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+            border: 1px solid var(--muted);
+            padding: 48px 40px;
+          }
+        }
+      `}</style>
     </MobileFrame>
   );
 }

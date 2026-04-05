@@ -174,6 +174,7 @@ export function DevicesPage() {
               <div key={device.id} className="relative">
                 <button
                   onClick={() => !isEditMode && navigate(`/homes/${homeId}/rooms/${roomId}/devices/${device.id}`)}
+                  aria-label={`${device.name} — ${device.isOn ? 'On' : 'Off'}`}
                   className="relative flex flex-col justify-between text-left w-full"
                   style={{
                     aspectRatio: '1 / 1',
@@ -239,6 +240,8 @@ export function DevicesPage() {
                       e.stopPropagation();
                       toggleFavorite(device.id);
                     }}
+                    aria-label={`${device.isFavorite ? 'Remove from' : 'Add to'} favorites: ${device.name}`}
+                    aria-pressed={!!device.isFavorite}
                     className="absolute flex items-center justify-center"
                     style={{
                       top: '12px',
@@ -311,7 +314,7 @@ export function DevicesPage() {
       
       {/* Add Device Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-30 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddModal(false)}>
+        <div className="fixed inset-0 z-30 flex items-end justify-center" role="dialog" aria-modal="true" aria-label="Add device" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowAddModal(false)}>
           <div className="w-full max-w-md rounded-t-2xl p-5" style={{ backgroundColor: 'var(--background)', maxHeight: '70vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <p className="text-white" style={{ fontSize: '18px', fontWeight: 600 }}>{t('devices.addDevice')}</p>
@@ -371,7 +374,7 @@ export function DevicesPage() {
       
       {/* Delete Confirmation */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={() => setShowDeleteConfirm(null)}>
+        <div className="fixed inset-0 z-40 flex items-center justify-center px-4" role="dialog" aria-modal="true" aria-label="Delete device confirmation" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} onClick={() => setShowDeleteConfirm(null)}>
           <div className="w-full max-w-sm rounded-2xl p-5" style={{ backgroundColor: 'var(--background)' }} onClick={(e) => e.stopPropagation()}>
             <p className="text-white mb-2" style={{ fontSize: '18px', fontWeight: 600 }}>{t('devices.deleteDeviceConfirm')}</p>
             <p style={{ color: 'var(--muted-foreground)', fontSize: '14px', marginBottom: '24px' }}>

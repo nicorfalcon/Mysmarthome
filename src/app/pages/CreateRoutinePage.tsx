@@ -8,6 +8,8 @@ import { useTranslation } from '../i18n/useTranslation';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
+const colorOptions = ['#FFD700', '#FF6B35', '#FF3B30', '#7C5CFF', '#34C759', '#00C7FF', '#FFFFFF'];
+
 const scheduleOptions = [
   '06:00 AM', '07:00 AM', '08:00 AM', '09:00 AM',
   '12:00 PM', '02:00 PM', '06:00 PM', '08:00 PM',
@@ -18,7 +20,7 @@ function describeAction(type: Device['type'], cfg: Partial<Device>): string {
   switch (type) {
     case 'lamp':
       if (cfg.isOn === false) return 'Turn off';
-      return ['Turn on', cfg.brightness != null ? `${cfg.brightness}% brightness` : null]
+      return ['Turn on', cfg.brightness != null ? `${cfg.brightness}% brightness` : null, cfg.color ? 'custom color' : null]
         .filter(Boolean).join(', ');
     case 'ac':
       if (cfg.isOn === false) return 'Turn off';
@@ -29,10 +31,17 @@ function describeAction(type: Device['type'], cfg: Partial<Device>): string {
       if (cfg.position === 100) return 'Open';
       if (cfg.position != null) return `Set to ${cfg.position}%`;
       return cfg.isOn ? 'Open' : 'Close';
-    case 'oven':
+    case 'oven': {
       if (cfg.isOn === false) return 'Turn off';
-      return ['Turn on', cfg.temperature != null ? `${cfg.temperature}°C` : null]
-        .filter(Boolean).join(', ');
+      const convActive = cfg.convectionMode && cfg.convectionMode !== 'apagado';
+      const grillActive = cfg.grillMode && cfg.grillMode !== 'apagado';
+      return ['Turn on',
+        cfg.temperature != null ? `${cfg.temperature}°C` : null,
+        convActive ? 'convection' : null,
+        grillActive ? 'grill' : null,
+        cfg.heatSource ?? null,
+      ].filter(Boolean).join(', ');
+    }
     case 'fridge': {
       const map: Record<string, string> = { Normal: 'Normal mode', Fiesta: 'Party mode', Vacaciones: 'Vacation mode' };
       return cfg.mode ? (map[cfg.mode] ?? `${cfg.mode} mode`) : 'Keep running';
@@ -61,10 +70,15 @@ function defaultConfig(dev: Device): Partial<Device> {
     isOn: dev.isOn,
     temperature: dev.temperature,
     brightness: dev.brightness,
+    color: dev.color,
     volume: dev.volume,
     mode: dev.mode,
     position: dev.position,
     acMode: dev.acMode,
+    heatSource: dev.heatSource,
+    grillMode: dev.grillMode,
+    convectionMode: dev.convectionMode,
+    freezerTemperature: dev.freezerTemperature,
   };
 }
 
@@ -164,7 +178,26 @@ function DeviceConfigSheet({
         {showPower && <ToggleRow value={cfg.isOn ?? false} onChange={(v) => u({ isOn: v })} />}
 
         {device.type === 'lamp' && cfg.isOn && (
-          <SliderRow label="Brightness" value={cfg.brightness ?? 50} onChange={(v) => u({ brightness: v })} />
+          <>
+            <SliderRow label="Brightness" value={cfg.brightness ?? 50} onChange={(v) => u({ brightness: v })} />
+            <div style={{ backgroundColor: 'var(--card)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500, marginBottom: '12px' }}>Color</p>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {colorOptions.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => u({ color })}
+                    style={{
+                      width: '34px', height: '34px', borderRadius: '50%', backgroundColor: color,
+                      border: cfg.color === color ? '3px solid #7C5CFF' : '2px solid transparent',
+                      outline: cfg.color === color ? '2px solid rgba(124,92,255,0.45)' : 'none',
+                      outlineOffset: '2px', cursor: 'pointer', flexShrink: 0,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
         {device.type === 'ac' && cfg.isOn && (
@@ -179,11 +212,57 @@ function DeviceConfigSheet({
         )}
 
         {device.type === 'oven' && cfg.isOn && (
-          <TempRow label="Temperature" value={cfg.temperature ?? 180} min={90} max={230} step={10} onChange={(v) => u({ temperature: v })} />
+          <>
+            <TempRow label="Temperature" value={cfg.temperature ?? 180} min={90} max={230} step={10} onChange={(v) => u({ temperature: v })} />
+            {/* Mode: Convection / Grill — mutually exclusive */}
+            <div style={{ backgroundColor: 'var(--card)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500, marginBottom: '10px' }}>Mode</p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {([
+                  { label: 'Convection', field: 'convectionMode' as const, offVal: 'apagado', onVal: 'convencional' },
+                  { label: 'Grill', field: 'grillMode' as const, offVal: 'apagado', onVal: 'completo' },
+                ] as const).map(({ label, field, offVal, onVal }) => {
+                  const isActive = !!cfg[field] && cfg[field] !== offVal;
+                  const other = field === 'convectionMode' ? 'grillMode' : 'convectionMode';
+                  return (
+                    <button
+                      key={label}
+                      onClick={() => u(isActive
+                        ? { [field]: offVal }
+                        : { [field]: onVal, [other]: offVal }
+                      )}
+                      style={{ flex: 1, padding: '9px', borderRadius: '20px', border: 'none', cursor: 'pointer', backgroundColor: isActive ? '#7C5CFF' : 'var(--muted)', color: isActive ? '#fff' : '#B8B8C2', fontSize: '13px', fontWeight: 500 }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Fan: Conventional / Bottom / Top — toggleable */}
+            <div style={{ backgroundColor: 'var(--card)', borderRadius: '12px', padding: '14px 16px', marginBottom: '10px' }}>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500, marginBottom: '10px' }}>Fan</p>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {[{ label: 'Conventional', val: 'convencional' }, { label: 'Bottom', val: 'abajo' }, { label: 'Top', val: 'arriba' }].map(({ label, val }) => (
+                  <button
+                    key={val}
+                    onClick={() => u({ heatSource: cfg.heatSource === val ? undefined : val })}
+                    style={{ flex: 1, padding: '9px', borderRadius: '20px', border: 'none', cursor: 'pointer', backgroundColor: cfg.heatSource === val ? '#7C5CFF' : 'var(--muted)', color: cfg.heatSource === val ? '#fff' : '#B8B8C2', fontSize: '12px', fontWeight: 500 }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
         )}
 
         {device.type === 'fridge' && (
-          <Pills label="Mode" options={[{ label: 'Normal', val: 'Normal' }, { label: 'Party', val: 'Fiesta' }, { label: 'Vacation', val: 'Vacaciones' }]} value={cfg.mode} onChange={(v) => u({ mode: v })} />
+          <>
+            <TempRow label="Fridge Temperature" value={cfg.temperature ?? 4} min={2} max={8} onChange={(v) => u({ temperature: v })} />
+            <TempRow label="Freezer Temperature" value={cfg.freezerTemperature ?? -15} min={-20} max={-8} onChange={(v) => u({ freezerTemperature: v })} />
+            <Pills label="Mode" options={[{ label: 'Normal', val: 'Normal' }, { label: 'Party', val: 'Fiesta' }, { label: 'Vacation', val: 'Vacaciones' }]} value={cfg.mode} onChange={(v) => u({ mode: v })} />
+          </>
         )}
 
         {device.type === 'vacuum' && (
@@ -231,7 +310,7 @@ export function CreateRoutinePage() {
   const [showDevicePicker, setShowDevicePicker] = useState(false);
   const [configSheet, setConfigSheet] = useState<{ device: Device; params: Partial<Device>; isNew: boolean } | null>(null);
 
-  const canSave = name.trim().length > 0 && selectedDevices.length > 0;
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const openConfig = (dev: Device, existingParams?: Partial<Device>, isNew = false) => {
     setShowDevicePicker(false);
@@ -255,7 +334,19 @@ export function CreateRoutinePage() {
     setSelectedDevices((prev) => prev.filter((sd) => sd.deviceId !== deviceId));
 
   const handleSave = () => {
-    if (!canSave) return;
+    if (!name.trim() && selectedDevices.length === 0) {
+      setValidationError('Please enter a routine name and add at least one device action.');
+      return;
+    }
+    if (!name.trim()) {
+      setValidationError('Please enter a routine name.');
+      return;
+    }
+    if (selectedDevices.length === 0) {
+      setValidationError('Please add at least one device action.');
+      return;
+    }
+    setValidationError(null);
     const payload = {
       name: name.trim(),
       description: description.trim() || `Routine with ${selectedDevices.length} device(s)`,
@@ -305,7 +396,7 @@ export function CreateRoutinePage() {
         <button
           onClick={handleSave}
           className="flex items-center justify-center rounded-xl"
-          style={{ width: '36px', height: '36px', backgroundColor: canSave ? '#7C5CFF' : '#3A3A44' }}
+          style={{ width: '36px', height: '36px', backgroundColor: '#7C5CFF' }}
         >
           <Check size={18} color="#fff" />
         </button>
@@ -320,7 +411,7 @@ export function CreateRoutinePage() {
           type="text"
           placeholder="e.g. Morning Routine"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => { setName(e.target.value); if (validationError) setValidationError(null); }}
           className="w-full bg-transparent text-white outline-none px-4 py-3 rounded-xl"
           style={{
             backgroundColor: '#2A2A31',
@@ -416,16 +507,23 @@ export function CreateRoutinePage() {
         )}
       </div>
 
+      {/* Validation error */}
+      {validationError && (
+        <p style={{ color: '#FF3B30', fontSize: '13px', fontWeight: 500, marginBottom: '4px', marginTop: '-4px' }}>
+          {validationError}
+        </p>
+      )}
+
       {/* Save Button */}
       <button
         onClick={handleSave}
-        className="w-full py-3.5 rounded-xl mt-4 transition-all"
+        className="w-full py-3.5 rounded-xl mt-2 transition-all"
         style={{
-          background: canSave ? 'linear-gradient(135deg, #7C5CFF, #6B4FE0)' : '#3A3A44',
-          boxShadow: canSave ? '0 4px 16px rgba(124,92,255,0.35)' : 'none',
-          color: '#FFFFFF', fontSize: '16px', fontWeight: 600, border: 'none', cursor: canSave ? 'pointer' : 'default',
+          background: 'linear-gradient(135deg, #7C5CFF, #6B4FE0)',
+          boxShadow: '0 4px 16px rgba(124,92,255,0.35)',
+          color: '#FFFFFF', fontSize: '16px', fontWeight: 600, border: 'none', cursor: 'pointer',
         }}
-        onMouseDown={(e) => { if (canSave) e.currentTarget.style.transform = 'scale(0.97)'; }}
+        onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
         onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
       >
