@@ -203,10 +203,6 @@ function ProfileSection() {
 
   return (
     <div>
-      <h2 className="text-white" style={{ fontSize: '20px', fontWeight: 600, marginBottom: '24px' }}>
-        Profile
-      </h2>
-
       {/* Avatar */}
       <div className="flex flex-col items-center mb-8">
         <div className="relative mb-4">
@@ -935,7 +931,7 @@ export function WebSettingsPage() {
 
       {/* ── Content area ── */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        <div style={{ maxWidth: '680px', padding: '36px 40px' }}>
+        <div style={{ maxWidth: '680px', padding: '36px 40px', margin: '0 auto' }}>
           {activeTab === 'profile' && <ProfileSection />}
           {activeTab === 'password' && <PasswordSection />}
           {activeTab === 'preferences' && <PreferencesSection />}

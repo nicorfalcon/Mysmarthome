@@ -343,27 +343,26 @@ export function WebDashboardPage() {
                     aria-label={`Turn off ${device.name}`}
                     aria-pressed={device.isOn}
                     style={{
-                      padding: '6px 14px',
+                      padding: '6px 10px',
                       borderRadius: '8px',
                       border: 'none',
-                      backgroundColor: 'rgba(124,92,255,0.15)',
-                      color: '#7C5CFF',
-                      fontSize: '12px',
+                      backgroundColor: '#7C5CFF',
+                      color: '#fff',
+                      fontSize: '11px',
                       fontWeight: 600,
                       cursor: 'pointer',
                       flexShrink: 0,
+                      whiteSpace: 'nowrap',
                       transition: 'background-color 150ms ease',
                     }}
                     onMouseEnter={(e) =>
-                      (e.currentTarget.style.backgroundColor =
-                        'rgba(124,92,255,0.25)')
+                      (e.currentTarget.style.backgroundColor = '#6a4de0')
                     }
                     onMouseLeave={(e) =>
-                      (e.currentTarget.style.backgroundColor =
-                        'rgba(124,92,255,0.15)')
+                      (e.currentTarget.style.backgroundColor = '#7C5CFF')
                     }
                   >
-                    On
+                    Turn Off
                   </button>
                 </div>
               ))
