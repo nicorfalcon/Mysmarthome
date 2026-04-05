@@ -1,7 +1,6 @@
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Pencil, Info, SkipBack, SkipForward, Play, Pause, Shuffle, Repeat, Volume, Volume2, Sun, SunDim, Plus, Minimize2, Maximize2, PanelLeftClose, PanelRightOpen, Delete, Timer, Thermometer, RotateCw, Leaf, SlidersHorizontal, Wind, Snowflake, Flame, ChevronsUpDown, ChevronsLeftRight, Gauge, ChevronDown } from 'lucide-react';
-import { celsiusToFahrenheit, fahrenheitToCelsius } from '../utils/temperature';
+import { ArrowLeft, Pencil, Info, SkipBack, SkipForward, Play, Pause, Shuffle, Repeat, Volume, Volume2, Sun, SunDim, Plus, Minimize2, Maximize2, PanelLeftClose, PanelRightOpen, Delete, Timer, Thermometer, RotateCw, Leaf, SlidersHorizontal, Wind, Snowflake, Flame, ChevronsUpDown, ChevronsLeftRight, Gauge, ChevronDown, Power } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { DeviceIcon } from '../components/DeviceIcon';
 import { CircularDial } from '../components/CircularDial';
@@ -60,10 +59,6 @@ export function DeviceControlPage() {
     })()
   );
   const [flowRateDropdownOpen, setFlowRateDropdownOpen] = useState(false);
-
-  // Oven temperature modal
-  const [showOvenTempModal, setShowOvenTempModal] = useState(false);
-  const [ovenTempInput, setOvenTempInput] = useState('');
 
   // Oven fan mode modal
   const [fanModalOpen, setFanModalOpen] = useState<'grill' | 'conveccion' | null>(null);
@@ -264,47 +259,52 @@ export function DeviceControlPage() {
         </div>
       </div>
 
-      {/* Large icon + toggle */}
-      <div className="flex flex-col items-center mb-8">
+      {/* Centered content column */}
+      <div style={{ maxWidth: '540px', width: '100%', margin: '0 auto' }}>
+
+      {/* Device icon + compact power toggle */}
+      <div className="flex flex-col items-center mb-6">
         <div
-          className="flex items-center justify-center rounded-full mb-6"
+          className="flex items-center justify-center rounded-full mb-4"
           style={{
-            width: '120px',
-            height: '120px',
+            width: '96px',
+            height: '96px',
             background: device.isOn
               ? 'linear-gradient(135deg, #7C5CFF 0%, #9B84FF 100%)'
               : 'linear-gradient(135deg, var(--card), var(--muted))',
-            boxShadow: device.isOn ? '0 0 40px rgba(124,92,255,0.4)' : 'none',
+            boxShadow: device.isOn ? '0 0 32px rgba(124,92,255,0.4)' : 'none',
           }}
         >
           <DeviceIcon
             type={device.type}
-            size={56}
+            size={44}
             color={device.isOn ? '#FFFFFF' : '#B8B8C2'}
           />
         </div>
 
-        {/* ON/OFF Toggle - hidden for curtains and alarm */}
+        {/* ON/OFF Toggle — compact square icon button */}
         {device.type !== 'curtains' && device.type !== 'alarm' && (
           <button
             onClick={() => handleToggleWithConfirmation(!device.isOn)}
-            className="px-10 py-3 rounded-full transition-all"
+            className="flex items-center justify-center transition-all"
             style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '16px',
               background: device.isOn
                 ? 'linear-gradient(135deg, #7C5CFF, #6B4FE0)'
                 : '#3A3A44',
               boxShadow: device.isOn
                 ? '0 4px 16px rgba(124,92,255,0.4)'
                 : '0 2px 8px rgba(0,0,0,0.2)',
-              color: '#FFFFFF',
-              fontSize: '16px',
-              fontWeight: 600,
+              border: 'none',
+              cursor: 'pointer',
             }}
-            onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.95)')}
+            onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
             onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
             onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
           >
-            {device.isOn ? t('common.ON') : t('common.OFF')}
+            <Power size={22} color="#FFFFFF" />
           </button>
         )}
       </div>
@@ -404,8 +404,10 @@ export function DeviceControlPage() {
       {/* === AC CONTROLS === */}
       {device.type === 'ac' && (
         <>
-          {/* Row 1 — Temperature Dial (preserved) */}
+          {/* Row 1 — Temperature Dial (compact) */}
           <CircularDial
+            compact
+            step={1}
             value={device.temperature ?? 22}
             min={18}
             max={38}
@@ -691,102 +693,72 @@ export function DeviceControlPage() {
             </div>
           </div>
 
-          {/* Temperatura + Temporizador — 2 columnas */}
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            {/* Temperatura */}
-            <div
-              className="flex flex-col"
-              style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', padding: '16px' }}
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <Thermometer size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
-                <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>
-                  {t('deviceControl.temperature')}
-                </span>
-              </div>
-              <div className="flex flex-col items-center flex-1 justify-center">
-                <div
-                  className="text-center"
-                  onClick={() => {
-                    const display = preferences.temperatureUnit === 'fahrenheit'
-                      ? celsiusToFahrenheit(device.temperature ?? 180)
-                      : (device.temperature ?? 180);
-                    setOvenTempInput(String(display));
-                    setShowOvenTempModal(true);
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <span className="text-white" style={{ fontSize: '36px', fontWeight: 700, lineHeight: 1 }}>
-                    {preferences.temperatureUnit === 'fahrenheit'
-                      ? celsiusToFahrenheit(device.temperature ?? 180)
-                      : (device.temperature ?? 180)}
-                  </span>
-                  <span style={{ color: '#7C5CFF', fontSize: '15px', fontWeight: 600, marginLeft: '3px' }}>
-                    {preferences.temperatureUnit === 'fahrenheit' ? '°F' : '°C'}
-                  </span>
-                </div>
-              </div>
-            </div>
+          {/* Temperatura — compact CircularDial */}
+          <CircularDial
+            compact
+            step={5}
+            value={device.temperature ?? 180}
+            min={90}
+            max={230}
+            onChange={(temp) => updateDevice(device.id, { temperature: temp })}
+            label={t('deviceControl.temperature')}
+            temperatureUnit={preferences.temperatureUnit}
+            arcColor="#FF6B35"
+          />
 
-            {/* Temporizador */}
-            <div
-              className="flex flex-col"
-              style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', padding: '16px' }}
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <Timer size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
-                <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>
-                  {t('oven.timer')}
+          {/* Temporizador — full width card */}
+          <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <Timer size={14} color="var(--muted-foreground)" strokeWidth={1.5} />
+              <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', fontWeight: 500 }}>
+                {t('oven.timer')}
+              </span>
+            </div>
+            <div className="flex items-center justify-center gap-6">
+              <button
+                onClick={() => updateDevice(device.id, { timerMinutes: Math.max(0, (device.timerMinutes ?? 18) - 5) })}
+                className="flex items-center justify-center"
+                style={{
+                  width: '40px', height: '40px', borderRadius: '50%',
+                  backgroundColor: 'var(--muted)', color: '#FFFFFF',
+                  fontSize: '20px', border: 'none', cursor: 'pointer',
+                }}
+                onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
+                onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+              >
+                −
+              </button>
+              <div
+                className="text-center"
+                onClick={() => {
+                  setOvenTimerInput(String(device.timerMinutes ?? 18));
+                  setShowOvenTimerModal(true);
+                }}
+                style={{ cursor: 'pointer', minWidth: '80px' }}
+              >
+                <span className="text-white" style={{ fontSize: '36px', fontWeight: 700, lineHeight: 1 }}>
+                  {device.timerMinutes ?? 18}
+                </span>
+                <span style={{ color: 'var(--muted-foreground)', fontSize: '15px', fontWeight: 500, marginLeft: '4px' }}>
+                  min
                 </span>
               </div>
-              <div className="flex flex-col items-center flex-1 justify-center gap-4">
-                <div
-                  className="text-center"
-                  onClick={() => {
-                    setOvenTimerInput(String(device.timerMinutes ?? 18));
-                    setShowOvenTimerModal(true);
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <span className="text-white" style={{ fontSize: '36px', fontWeight: 700, lineHeight: 1 }}>
-                    {device.timerMinutes ?? 18}
-                  </span>
-                  <span style={{ color: 'var(--muted-foreground)', fontSize: '15px', fontWeight: 500, marginLeft: '4px' }}>
-                    min
-                  </span>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => updateDevice(device.id, { timerMinutes: Math.max(0, (device.timerMinutes ?? 18) - 5) })}
-                    className="flex items-center justify-center"
-                    style={{
-                      width: '36px', height: '36px', borderRadius: '50%',
-                      backgroundColor: 'var(--muted)', color: '#FFFFFF',
-                      fontSize: '20px', border: 'none',
-                    }}
-                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
-                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  >
-                    −
-                  </button>
-                  <button
-                    onClick={() => updateDevice(device.id, { timerMinutes: Math.min(240, (device.timerMinutes ?? 18) + 5) })}
-                    className="flex items-center justify-center"
-                    style={{
-                      width: '36px', height: '36px', borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #7C5CFF, #6B4FE0)',
-                      boxShadow: '0 2px 8px rgba(124,92,255,0.3)',
-                      color: '#FFFFFF', fontSize: '20px', border: 'none',
-                    }}
-                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
-                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
+              <button
+                onClick={() => updateDevice(device.id, { timerMinutes: Math.min(240, (device.timerMinutes ?? 18) + 5) })}
+                className="flex items-center justify-center"
+                style={{
+                  width: '40px', height: '40px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #7C5CFF, #6B4FE0)',
+                  boxShadow: '0 2px 8px rgba(124,92,255,0.3)',
+                  color: '#FFFFFF', fontSize: '20px', border: 'none', cursor: 'pointer',
+                }}
+                onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
+                onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+              >
+                +
+              </button>
             </div>
           </div>
 
@@ -884,139 +856,6 @@ export function DeviceControlPage() {
                   >
                     {t('common.cancel')}
                   </button>
-                </div>
-              </>
-            );
-          })()}
-
-          {/* Temperature Modal */}
-          {showOvenTempModal && (() => {
-            const MIN_C = 90, MAX_C = 230;
-            const isFahrenheit = preferences.temperatureUnit === 'fahrenheit';
-            const minDisplay = isFahrenheit ? celsiusToFahrenheit(MIN_C) : MIN_C;
-            const maxDisplay = isFahrenheit ? celsiusToFahrenheit(MAX_C) : MAX_C;
-            const unit = isFahrenheit ? '°F' : '°C';
-            const parsed = parseInt(ovenTempInput, 10);
-            const isValid = !isNaN(parsed) && parsed >= minDisplay && parsed <= maxDisplay;
-
-            const handleSave = () => {
-              if (!isValid) return;
-              const inCelsius = isFahrenheit ? fahrenheitToCelsius(parsed) : parsed;
-              updateDevice(device.id, { temperature: inCelsius });
-              setShowOvenTempModal(false);
-            };
-
-            return (
-              <>
-                {/* Backdrop */}
-                <div
-                  onClick={() => setShowOvenTempModal(false)}
-                  style={{
-                    position: 'fixed', inset: 0, zIndex: 60,
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    backdropFilter: 'blur(4px)',
-                  }}
-                />
-                {/* Modal */}
-                <div style={{
-                  position: 'fixed', zIndex: 61,
-                  top: '50%', left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  backgroundColor: 'var(--card)',
-                  borderRadius: '20px',
-                  padding: '28px 24px 24px',
-                  width: '90vw', maxWidth: '320px',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                  border: '1px solid var(--border)',
-                  display: 'flex', flexDirection: 'column', gap: '20px',
-                }}>
-                  {/* Title */}
-                  <div className="flex items-center gap-2">
-                    <Thermometer size={18} color="#7C5CFF" strokeWidth={1.5} />
-                    <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--foreground)' }}>
-                      {t('oven.setTemperature')}
-                    </span>
-                  </div>
-
-                  {/* Input */}
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="flex items-baseline gap-2">
-                      <input
-                        autoFocus
-                        type="text"
-                        inputMode="numeric"
-                        value={ovenTempInput}
-                        onChange={(e) => setOvenTempInput(e.target.value.replace(/[^0-9]/g, ''))}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSave();
-                          if (e.key === 'Escape') setShowOvenTempModal(false);
-                        }}
-                        style={{
-                          fontSize: '48px', fontWeight: 700,
-                          color: isValid || ovenTempInput === '' ? 'var(--foreground)' : '#FF3B30',
-                          background: 'transparent', border: 'none',
-                          borderBottom: `2px solid ${isValid || ovenTempInput === '' ? '#7C5CFF' : '#FF3B30'}`,
-                          outline: 'none', width: '100px',
-                          textAlign: 'center', lineHeight: 1,
-                          transition: 'color 150ms ease, border-color 150ms ease',
-                        }}
-                      />
-                      <span style={{
-                        fontSize: '20px', fontWeight: 600,
-                        color: isValid || ovenTempInput === '' ? '#7C5CFF' : '#FF3B30',
-                        transition: 'color 150ms ease',
-                      }}>
-                        {unit}
-                      </span>
-                    </div>
-
-                    {/* Range hint */}
-                    <p style={{
-                      fontSize: '12px', fontWeight: 500, textAlign: 'center',
-                      color: !isValid && ovenTempInput !== '' ? '#FF3B30' : 'var(--muted-foreground)',
-                      transition: 'color 150ms ease',
-                    }}>
-                      {t('oven.tempRangeHint', { min: `${minDisplay}${unit}`, max: `${maxDisplay}${unit}` })}
-                    </p>
-                  </div>
-
-                  {/* Buttons */}
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowOvenTempModal(false)}
-                      style={{
-                        flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
-                        backgroundColor: 'var(--muted)', color: 'var(--muted-foreground)',
-                        fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-                      }}
-                      onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.97)')}
-                      onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                    >
-                      {t('common.cancel')}
-                    </button>
-                    <button
-                      onClick={handleSave}
-                      disabled={!isValid}
-                      style={{
-                        flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
-                        background: isValid
-                          ? 'linear-gradient(135deg, #7C5CFF, #6B4FE0)'
-                          : 'var(--muted)',
-                        color: isValid ? '#FFFFFF' : 'var(--muted-foreground)',
-                        fontSize: '14px', fontWeight: 600,
-                        cursor: isValid ? 'pointer' : 'not-allowed',
-                        boxShadow: isValid ? '0 2px 8px rgba(124,92,255,0.3)' : 'none',
-                        opacity: isValid ? 1 : 0.5,
-                        transition: 'all 150ms ease',
-                      }}
-                      onMouseDown={(e) => { if (isValid) e.currentTarget.style.transform = 'scale(0.97)'; }}
-                      onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                    >
-                      {t('common.save')}
-                    </button>
-                  </div>
                 </div>
               </>
             );
@@ -1851,61 +1690,31 @@ export function DeviceControlPage() {
       {/* === FRIDGE CONTROLS === */}
       {device.type === 'fridge' && (
         <>
-          {/* Fridge Temperature (2–8°C) */}
-          <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
-            <p className="text-white mb-3" style={{ fontSize: '14px', fontWeight: 500 }}>
-              {t('fridge.fridgeTemp')}
-            </p>
-            <div className="flex items-center justify-center gap-6">
-              <button
-                onClick={() => updateDevice(device.id, { temperature: Math.max(2, (device.temperature ?? 4) - 1) })}
-                className="flex items-center justify-center rounded-full"
-                style={{ width: '44px', height: '44px', backgroundColor: 'var(--muted)', color: '#fff', fontSize: '20px' }}
-              >
-                -
-              </button>
-              <p className="text-white" style={{ fontSize: '40px', fontWeight: 700 }}>
-                {preferences.temperatureUnit === 'fahrenheit'
-                  ? `${Math.round((device.temperature ?? 4) * 9 / 5 + 32)}°F`
-                  : `${device.temperature ?? 4}°C`}
-              </p>
-              <button
-                onClick={() => updateDevice(device.id, { temperature: Math.min(8, (device.temperature ?? 4) + 1) })}
-                className="flex items-center justify-center rounded-full"
-                style={{ width: '44px', height: '44px', backgroundColor: '#7C5CFF', color: '#fff', fontSize: '20px' }}
-              >
-                +
-              </button>
-            </div>
-          </div>
+          {/* Fridge Temperature (2–8°C) — compact dial */}
+          <CircularDial
+            compact
+            step={1}
+            value={device.temperature ?? 4}
+            min={2}
+            max={8}
+            onChange={(temp) => updateDevice(device.id, { temperature: temp })}
+            label={t('fridge.fridgeTemp')}
+            temperatureUnit={preferences.temperatureUnit}
+            arcColor="#7C5CFF"
+          />
 
-          {/* Freezer Temperature (-20 to -8°C) */}
-          <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
-            <p className="text-white mb-3" style={{ fontSize: '14px', fontWeight: 500 }}>
-              {t('fridge.freezerTemp')}
-            </p>
-            <div className="flex items-center justify-center gap-6">
-              <button
-                onClick={() => updateDevice(device.id, { freezerTemperature: Math.max(-20, (device.freezerTemperature ?? -15) - 1) })}
-                className="flex items-center justify-center rounded-full"
-                style={{ width: '44px', height: '44px', backgroundColor: 'var(--muted)', color: '#fff', fontSize: '20px' }}
-              >
-                -
-              </button>
-              <p className="text-white" style={{ fontSize: '40px', fontWeight: 700 }}>
-                {preferences.temperatureUnit === 'fahrenheit'
-                  ? `${Math.round((device.freezerTemperature ?? -15) * 9 / 5 + 32)}°F`
-                  : `${device.freezerTemperature ?? -15}°C`}
-              </p>
-              <button
-                onClick={() => updateDevice(device.id, { freezerTemperature: Math.min(-8, (device.freezerTemperature ?? -15) + 1) })}
-                className="flex items-center justify-center rounded-full"
-                style={{ width: '44px', height: '44px', backgroundColor: '#7C5CFF', color: '#fff', fontSize: '20px' }}
-              >
-                +
-              </button>
-            </div>
-          </div>
+          {/* Freezer Temperature (-20 to -8°C) — compact dial */}
+          <CircularDial
+            compact
+            step={1}
+            value={device.freezerTemperature ?? -15}
+            min={-20}
+            max={-8}
+            onChange={(temp) => updateDevice(device.id, { freezerTemperature: temp })}
+            label={t('fridge.freezerTemp')}
+            temperatureUnit={preferences.temperatureUnit}
+            arcColor="#00C7FF"
+          />
 
           {/* Mode */}
           <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
@@ -1939,6 +1748,8 @@ export function DeviceControlPage() {
 
       {/* Current State */}
       {/* Removed Active/Inactive labels per Material Design guidelines - state is conveyed by ON/OFF toggle */}
+
+      </div>{/* end centered column */}
 
       {/* Rename Device Modal */}
       {showEditModal && (() => {

@@ -14,6 +14,10 @@ interface CircularDialProps {
   arcColor?: string;
   /** Preset values in Celsius to show as quick-select chips below the dial */
   presets?: number[];
+  /** Render a compact 185px version of the dial */
+  compact?: boolean;
+  /** Step size for +/- buttons (shown when compact=true or presets provided) */
+  step?: number;
 }
 
 // Conversion helpers
@@ -30,6 +34,8 @@ export function CircularDial({
   temperatureUnit = 'celsius',
   arcColor = '#7C5CFF',
   presets,
+  compact = false,
+  step = 5,
 }: CircularDialProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -176,11 +182,12 @@ export function CircularDial({
 
   return (
     <div
-      className="p-4 mb-3"
+      className="mb-3"
       style={{
         backgroundColor: 'var(--card)',
         borderRadius: '12px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+        padding: compact ? '12px 12px 16px' : '16px',
       }}
     >
       {label && (
@@ -192,7 +199,7 @@ export function CircularDial({
         <svg
           ref={svgRef}
           viewBox="0 0 300 220"
-          style={{ width: '260px', height: 'auto', touchAction: 'none', userSelect: 'none' }}
+          style={{ width: compact ? '185px' : '260px', height: 'auto', touchAction: 'none', userSelect: 'none' }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -271,73 +278,81 @@ export function CircularDial({
         </svg>
       </div>
 
-      {/* Preset chips + +/- buttons */}
+      {/* Preset chips */}
       {presets && presets.length > 0 && (
-        <div className="mt-1">
-          {/* Preset chips */}
-          <div className="flex justify-center gap-2 mb-4">
-            {presets.map((preset) => {
-              const displayPreset = isFahrenheit ? cToF(preset) : preset;
-              const isActive = value === preset;
-              return (
-                <button
-                  key={preset}
-                  onClick={() => onChange(preset)}
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: '20px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    backgroundColor: isActive ? arcColor : 'var(--muted)',
-                    color: isActive ? '#FFFFFF' : '#B8B8C2',
-                    border: 'none',
-                    transition: 'all 150ms ease',
-                  }}
-                >
-                  {displayPreset}{displayUnit}
-                </button>
-              );
-            })}
-          </div>
-          {/* +/- buttons */}
-          <div className="flex justify-center gap-6">
-            <button
-              onClick={() => onChange(Math.max(min, value - 5))}
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--muted)',
-                color: '#FFFFFF',
-                fontSize: '22px',
-                fontWeight: 400,
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              −
-            </button>
-            <button
-              onClick={() => onChange(Math.min(max, value + 5))}
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                backgroundColor: arcColor,
-                color: '#FFFFFF',
-                fontSize: '22px',
-                fontWeight: 400,
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              +
-            </button>
-          </div>
+        <div className="flex justify-center gap-2 mb-3 mt-1">
+          {presets.map((preset) => {
+            const displayPreset = isFahrenheit ? cToF(preset) : preset;
+            const isActive = value === preset;
+            return (
+              <button
+                key={preset}
+                onClick={() => onChange(preset)}
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '20px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  backgroundColor: isActive ? arcColor : 'var(--muted)',
+                  color: isActive ? '#FFFFFF' : '#B8B8C2',
+                  border: 'none',
+                  transition: 'all 150ms ease',
+                }}
+              >
+                {displayPreset}{displayUnit}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* +/- step buttons — shown when presets provided OR when compact + step */}
+      {((presets && presets.length > 0) || compact) && (
+        <div className="flex justify-center gap-6 mt-2">
+          <button
+            onClick={() => onChange(Math.max(min, value - step))}
+            style={{
+              width: compact ? '40px' : '48px',
+              height: compact ? '40px' : '48px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--muted)',
+              color: '#FFFFFF',
+              fontSize: compact ? '18px' : '22px',
+              fontWeight: 400,
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+            onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
+            onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          >
+            −
+          </button>
+          <button
+            onClick={() => onChange(Math.min(max, value + step))}
+            style={{
+              width: compact ? '40px' : '48px',
+              height: compact ? '40px' : '48px',
+              borderRadius: '50%',
+              backgroundColor: arcColor,
+              color: '#FFFFFF',
+              fontSize: compact ? '18px' : '22px',
+              fontWeight: 400,
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+            onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
+            onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          >
+            +
+          </button>
         </div>
       )}
 
