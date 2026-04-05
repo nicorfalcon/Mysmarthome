@@ -10,7 +10,9 @@ const segmentTitleMap: Record<string, string> = {
   homes: 'Rooms',
   'global-devices': 'Devices',
   routines: 'Routines',
-  profile: 'Profile',
+  settings: 'Settings',
+  notifications: 'Notifications',
+  energy: 'Energy',
   activity: 'Activity',
 };
 

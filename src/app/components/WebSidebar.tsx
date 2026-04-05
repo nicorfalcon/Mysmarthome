@@ -6,11 +6,12 @@ import {
   DoorOpen,
   Zap,
   CalendarClock,
-  User,
   Bolt,
   Settings,
-  Smartphone,
   ChevronDown,
+  Plus,
+  X,
+  Check,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -28,16 +29,18 @@ const mainNavItems: NavItem[] = [
 ];
 
 const accountNavItems: NavItem[] = [
-  { icon: User, label: 'Profile', path: '/web/profile' },
-  { icon: Bolt, label: 'Energy', path: '/web/profile/energy' },
-  { icon: Settings, label: 'Settings', path: '/web/profile/settings' },
+  { icon: Bolt, label: 'Energy', path: '/web/energy' },
+  { icon: Settings, label: 'Settings', path: '/web/settings' },
 ];
 
 export function WebSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { activeHome, homes, setSelectedHomeId } = useApp();
+  const { activeHome, homes, setSelectedHomeId, addHome } = useApp();
   const [homeDropdownOpen, setHomeDropdownOpen] = useState(false);
+  const [showAddHomeModal, setShowAddHomeModal] = useState(false);
+  const [newHomeName, setNewHomeName] = useState('');
+  const [newHomeNameError, setNewHomeNameError] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
 
   const isActive = (item: NavItem) => {
@@ -201,41 +204,182 @@ export function WebSidebar() {
               boxShadow: 'var(--shadow-md)',
               zIndex: 20,
               overflow: 'hidden',
+              maxHeight: '280px',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
-            {homes.map((home) => (
-              <button
-                key={home.id}
-                onClick={() => {
-                  setSelectedHomeId(home.id);
-                  setHomeDropdownOpen(false);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  textAlign: 'left',
-                  fontSize: '13px',
-                  fontWeight: home.id === activeHome?.id ? 600 : 400,
-                  color:
-                    home.id === activeHome?.id
-                      ? '#7C5CFF'
-                      : 'var(--foreground)',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderBottom: '1px solid var(--muted)',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor =
-                    'rgba(124,92,255,0.06)')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = 'transparent')
-                }
-              >
-                {home.name}
-              </button>
-            ))}
+            {/* Scrollable home list */}
+            <div style={{ overflowY: 'auto', flex: 1 }}>
+              {homes.map((home) => (
+                <button
+                  key={home.id}
+                  onClick={() => {
+                    setSelectedHomeId(home.id);
+                    setHomeDropdownOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    textAlign: 'left',
+                    fontSize: '13px',
+                    fontWeight: home.id === activeHome?.id ? 600 : 400,
+                    color: home.id === activeHome?.id ? '#7C5CFF' : 'var(--foreground)',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderBottom: '1px solid var(--muted)',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(124,92,255,0.06)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  {home.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Sticky "Add New Home" action — always at the bottom */}
+            <button
+              onClick={() => {
+                setHomeDropdownOpen(false);
+                setNewHomeName('');
+                setNewHomeNameError(false);
+                setShowAddHomeModal(true);
+              }}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                textAlign: 'left',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: '#7C5CFF',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderTop: '1px solid var(--muted)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(124,92,255,0.08)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              <Plus size={14} />
+              Add New Home
+            </button>
+          </div>
+        )}
+
+        {/* Add Home Modal */}
+        {showAddHomeModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.65)' }}
+            onClick={() => setShowAddHomeModal(false)}
+          >
+            <div
+              style={{
+                backgroundColor: 'var(--card)',
+                borderRadius: '16px',
+                border: '1px solid var(--muted)',
+                padding: '24px',
+                width: '360px',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <p className="text-white" style={{ fontSize: '17px', fontWeight: 600 }}>Add New Home</p>
+                <button
+                  onClick={() => setShowAddHomeModal(false)}
+                  style={{
+                    width: '28px', height: '28px', borderRadius: '50%',
+                    backgroundColor: 'var(--muted)', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <X size={14} color="var(--muted-foreground)" />
+                </button>
+              </div>
+
+              {/* Name input */}
+              <div style={{ marginBottom: '20px' }}>
+                <p style={{ color: 'var(--muted-foreground)', fontSize: '12px', marginBottom: '8px' }}>Home Name</p>
+                <input
+                  type="text"
+                  placeholder="e.g. Family Home"
+                  value={newHomeName}
+                  autoFocus
+                  onChange={(e) => {
+                    setNewHomeName(e.target.value);
+                    if (newHomeNameError) setNewHomeNameError(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (!newHomeName.trim()) { setNewHomeNameError(true); return; }
+                      const newHome = { id: `home-${Date.now()}`, name: newHomeName.trim(), type: 'home', rooms: [] };
+                      addHome(newHome);
+                      setSelectedHomeId(newHome.id);
+                      setShowAddHomeModal(false);
+                      setNewHomeName('');
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    backgroundColor: 'var(--background)',
+                    border: `1px solid ${newHomeNameError ? '#FF3B30' : 'var(--muted)'}`,
+                    color: 'var(--foreground)',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                {newHomeNameError && (
+                  <p style={{ color: '#FF3B30', fontSize: '12px', marginTop: '6px' }}>Home name is required.</p>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => setShowAddHomeModal(false)}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '10px',
+                    backgroundColor: 'var(--muted)', border: 'none', color: 'var(--foreground)',
+                    fontSize: '14px', fontWeight: 500, cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!newHomeName.trim()) { setNewHomeNameError(true); return; }
+                    const newHome = { id: `home-${Date.now()}`, name: newHomeName.trim(), type: 'home', rooms: [] };
+                    addHome(newHome);
+                    setSelectedHomeId(newHome.id);
+                    setShowAddHomeModal(false);
+                    setNewHomeName('');
+                  }}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #7C5CFF, #6B4FE0)',
+                    border: 'none', color: '#fff',
+                    fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    boxShadow: '0 4px 12px rgba(124,92,255,0.35)',
+                  }}
+                >
+                  <Check size={14} />
+                  Create Home
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -291,44 +435,6 @@ export function WebSidebar() {
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* Divider */}
-        <div
-          style={{
-            height: '1px',
-            backgroundColor: 'var(--muted)',
-            margin: '0 16px',
-          }}
-        />
-
-        {/* Mobile version link */}
-        <button
-          role="menuitem"
-          onClick={() => navigate('/')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            width: '100%',
-            padding: '14px 16px',
-            backgroundColor: 'transparent',
-            color: 'var(--muted-foreground)',
-            fontWeight: 400,
-            fontSize: '14px',
-            border: 'none',
-            borderLeft: '3px solid transparent',
-            cursor: 'pointer',
-            textAlign: 'left',
-          }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.backgroundColor = 'rgba(124,92,255,0.06)')
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.backgroundColor = 'transparent')
-          }
-        >
-          <Smartphone size={18} />
-          Mobile version
-        </button>
       </div>
     </nav>
   );

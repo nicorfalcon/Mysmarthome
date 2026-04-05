@@ -1,5 +1,7 @@
-import { Navigate } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
 
 export function ActivityRedirect() {
-  return <Navigate to="/routines" replace />;
+  const { pathname } = useLocation();
+  const base = pathname.startsWith('/web') ? '/web' : '';
+  return <Navigate to={`${base}/routines`} replace />;
 }

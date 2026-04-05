@@ -5,6 +5,7 @@ import { ArrowLeft, Check, Plus, X } from 'lucide-react';
 import { DeviceIcon } from '../components/DeviceIcon';
 import type { Device } from '../data/mockData';
 import { useTranslation } from '../i18n/useTranslation';
+import { useBasePath } from '../utils/useBasePath';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -298,6 +299,7 @@ export function CreateRoutinePage() {
   const navigate = useNavigate();
   const { activeDevices, activeHome, routines, addRoutine, updateRoutine } = useApp();
   const { t } = useTranslation();
+  const basePath = useBasePath();
 
   const existingRoutine = routineId ? routines.find((r) => r.id === routineId) : undefined;
 
@@ -359,7 +361,7 @@ export function CreateRoutinePage() {
     } else {
       addRoutine({ id: `routine-${Date.now()}`, ...payload });
     }
-    navigate('/routines');
+    navigate(`${basePath}/routines`);
   };
 
   // Render device config sheet as a full-screen overlay

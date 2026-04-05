@@ -94,7 +94,7 @@ export function DeviceInfoPage() {
         ))}
         {/* Energy Consumption Row - clickable */}
         <button
-          onClick={() => navigate('/profile/energy')}
+          onClick={() => navigate('/web/energy')}
           className="flex items-center justify-between px-5 py-4 w-full text-left transition-all"
           style={{ backgroundColor: 'transparent' }}
           onMouseDown={(e) => (e.currentTarget.style.backgroundColor = '#3A3A44')}

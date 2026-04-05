@@ -18,7 +18,7 @@ export function HomeSelectionPage() {
 
   const handleSelectHome = (homeId: string) => {
     setSelectedHomeId(homeId);
-    navigate('/rooms');
+    navigate('/web');
   };
 
   const handleAddHome = () => {
@@ -34,7 +34,7 @@ export function HomeSelectionPage() {
     setNewName('');
     setNewType('home');
     setShowAddModal(false);
-    navigate('/rooms');
+    navigate('/web');
   };
 
   const handleCloseModal = () => {

@@ -14,17 +14,14 @@ const segmentLabels: Record<string, string> = {
   rooms: 'Rooms',
   'global-devices': 'Devices',
   routines: 'Routines',
-  profile: 'Profile',
   energy: 'Energy',
   settings: 'Settings',
-  preferences: 'Preferences',
   notifications: 'Notifications',
   homes: 'Homes',
   create: 'Create',
   edit: 'Edit',
   info: 'Info',
   devices: 'Devices',
-  'user-info': 'User Info',
   activity: 'Activity',
 };
 
@@ -173,7 +170,7 @@ export function WebTopBar() {
         </button>
 
         <button
-          onClick={() => navigate('/web/profile/notifications')}
+          onClick={() => navigate('/web/notifications')}
           aria-label="Notifications"
           title="Notifications"
           style={{

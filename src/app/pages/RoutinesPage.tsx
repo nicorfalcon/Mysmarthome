@@ -4,11 +4,13 @@ import { useApp } from '../context/AppContext';
 import { Plus, Play, Clock, Zap, Pencil, X, Check, Trash2 } from 'lucide-react';
 import { DeviceIcon } from '../components/DeviceIcon';
 import { useTranslation } from '../i18n/useTranslation';
+import { useBasePath } from '../utils/useBasePath';
 
 export function RoutinesPage() {
   const navigate = useNavigate();
   const { activeHome, activeDevices, activeRoutines, toggleRunningRoutine, deleteRoutine } = useApp();
   const { t } = useTranslation();
+  const basePath = useBasePath();
   const [showActionMenu, setShowActionMenu] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
@@ -35,7 +37,7 @@ export function RoutinesPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate('/routines/create')}
+            onClick={() => navigate(`${basePath}/routines/create`)}
             className="flex items-center justify-center rounded-full transition-all"
             style={{
               width: '36px', height: '36px',
@@ -68,7 +70,7 @@ export function RoutinesPage() {
               : t('routines.selectLocationRoutines')}
           </p>
           <button
-            onClick={() => navigate('/routines/create')}
+            onClick={() => navigate(`${basePath}/routines/create`)}
             className="flex items-center gap-2 mt-5 px-5 py-2.5 rounded-xl transition-all"
             style={{
               background: 'linear-gradient(135deg, #7C5CFF, #6B4FE0)',
@@ -200,7 +202,7 @@ export function RoutinesPage() {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => {
-                  navigate(`/routines/${showActionMenu}/edit`);
+                  navigate(`${basePath}/routines/${showActionMenu}/edit`);
                   setShowActionMenu(null);
                 }}
                 className="w-full py-3.5 rounded-xl text-left px-4 flex items-center gap-3 transition-all"

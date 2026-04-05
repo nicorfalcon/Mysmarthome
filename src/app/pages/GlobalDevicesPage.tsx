@@ -4,11 +4,13 @@ import { useApp } from '../context/AppContext';
 import { ChevronDown, Cpu, DoorOpen, Star } from 'lucide-react';
 import { DeviceIcon, getDeviceRichStatus } from '../components/DeviceIcon';
 import { useTranslation } from '../i18n/useTranslation';
+import { useBasePath } from '../utils/useBasePath';
 
 export function GlobalDevicesPage() {
   const { homes, activeHome, activeRooms, activeDevices, preferences, toggleFavorite } = useApp();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const basePath = useBasePath();
   const [favoriteFilter, setFavoriteFilter] = useState(false);
   const [roomFilter, setRoomFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -34,7 +36,7 @@ export function GlobalDevicesPage() {
       for (const room of home.rooms) {
         const device = room.devices.find((d) => d.id === deviceId);
         if (device) {
-          return `/homes/${home.id}/rooms/${room.id}/devices/${device.id}`;
+          return `${basePath}/homes/${home.id}/rooms/${room.id}/devices/${device.id}`;
         }
       }
     }
@@ -268,7 +270,7 @@ export function GlobalDevicesPage() {
                 <>
                   {activeRooms.length === 0 ? (
                     <button
-                      onClick={() => navigate('/rooms')}
+                      onClick={() => navigate(`${basePath}/rooms`)}
                       className="flex items-center gap-4 text-left w-full transition-all"
                       style={{
                         padding: '20px',
@@ -299,7 +301,7 @@ export function GlobalDevicesPage() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => navigate('/rooms')}
+                      onClick={() => navigate(`${basePath}/rooms`)}
                       className="flex items-center gap-4 text-left w-full transition-all"
                       style={{
                         padding: '20px',

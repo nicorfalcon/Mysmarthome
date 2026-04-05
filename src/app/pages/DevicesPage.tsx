@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Pencil, X, Cpu, Trash2, Check, Star } from 'lucide-rea
 import { DeviceIcon, getDeviceRichStatus } from '../components/DeviceIcon';
 import type { Device } from '../data/mockData';
 import { useTranslation } from '../i18n/useTranslation';
+import { useBasePath } from '../utils/useBasePath';
 
 const deviceTypes: Device['type'][] = ['lamp', 'ac', 'oven', 'curtains', 'speaker', 'door', 'fridge', 'vacuum', 'alarm', 'sprinkler'];
 
@@ -13,6 +14,7 @@ export function DevicesPage() {
   const navigate = useNavigate();
   const { homes, addDevice, updateDevice, deleteDevice, toggleFavorite, preferences } = useApp();
   const { t } = useTranslation();
+  const basePath = useBasePath();
 
   const home = homes.find((h) => h.id === homeId);
   const room = home?.rooms.find((r) => r.id === roomId);
@@ -173,7 +175,7 @@ export function DevicesPage() {
             return (
               <div key={device.id} className="relative">
                 <button
-                  onClick={() => !isEditMode && navigate(`/homes/${homeId}/rooms/${roomId}/devices/${device.id}`)}
+                  onClick={() => !isEditMode && navigate(`${basePath}/homes/${homeId}/rooms/${roomId}/devices/${device.id}`)}
                   aria-label={`${device.name} — ${device.isOn ? 'On' : 'Off'}`}
                   className="relative flex flex-col justify-between text-left w-full"
                   style={{

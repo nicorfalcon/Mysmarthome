@@ -1,12 +1,13 @@
 import { useParams, useNavigate, useLocation } from 'react-router';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Pencil, Info, SkipBack, SkipForward, Play, Pause, Shuffle, Repeat, Volume, Volume2, Sun, SunDim, Plus, Minimize2, Maximize2, PanelLeftClose, PanelRightOpen, Delete, Timer, Thermometer, RotateCw, Leaf, SlidersHorizontal, Wind, Snowflake, Flame, ChevronsUpDown, ChevronsLeftRight, Gauge } from 'lucide-react';
+import { ArrowLeft, Pencil, Info, SkipBack, SkipForward, Play, Pause, Shuffle, Repeat, Volume, Volume2, Sun, SunDim, Plus, Minimize2, Maximize2, PanelLeftClose, PanelRightOpen, Delete, Timer, Thermometer, RotateCw, Leaf, SlidersHorizontal, Wind, Snowflake, Flame, ChevronsUpDown, ChevronsLeftRight, Gauge, ChevronDown } from 'lucide-react';
 import { celsiusToFahrenheit, fahrenheitToCelsius } from '../utils/temperature';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { DeviceIcon } from '../components/DeviceIcon';
 import { CircularDial } from '../components/CircularDial';
 import { ColorPicker } from '../components/ColorPicker';
 import { useTranslation } from '../i18n/useTranslation';
+import { useBasePath } from '../utils/useBasePath';
 
 const colorOptions = ['#FFD700', '#FF6B35', '#FF3B30', '#7C5CFF', '#34C759', '#00C7FF', '#FFFFFF'];
 
@@ -16,6 +17,7 @@ export function DeviceControlPage() {
   const location = useLocation();
   const { homes, toggleDevice, updateDevice, recentColors, addRecentColor, preferences } = useApp();
   const { t } = useTranslation();
+  const basePath = useBasePath();
 
   // Remove location.state dependency - always use navigate(-1) for true history
   // const fromPath = location.state?.from;
@@ -47,8 +49,17 @@ export function DeviceControlPage() {
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
 
-  // Sprinkler dispense state
+  // Sprinkler / faucet state
   const [dispensedAmount, setDispensedAmount] = useState(device?.dispensedAmount ?? 50);
+  const [flowRateInput, setFlowRateInput] = useState(String(device?.dispensedAmount ?? 2));
+  const [flowRateUnit, setFlowRateUnit] = useState<'liters' | 'gallons' | 'cubic-meters' | 'cubic-feet'>(
+    (() => {
+      const u = device?.dispensedUnit;
+      if (u === 'gallons' || u === 'cubic-meters' || u === 'cubic-feet') return u;
+      return 'liters';
+    })()
+  );
+  const [flowRateDropdownOpen, setFlowRateDropdownOpen] = useState(false);
 
   // Oven temperature modal
   const [showOvenTempModal, setShowOvenTempModal] = useState(false);
@@ -242,7 +253,7 @@ export function DeviceControlPage() {
           <button
             onClick={() =>
               navigate(
-                `/homes/${homeId}/rooms/${roomId}/devices/${deviceId}/info`
+                `${basePath}/homes/${homeId}/rooms/${roomId}/devices/${deviceId}/info`
               )
             }
             className="flex items-center justify-center rounded-full"
@@ -1415,66 +1426,192 @@ export function DeviceControlPage() {
       )}
 
       {/* === SPRINKLER / FAUCET CONTROLS === */}
-      {device.type === 'sprinkler' && (
-        <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
-          <p className="text-white mb-3" style={{ fontSize: '14px', fontWeight: 500 }}>
-            {t('deviceControl.dispense')}
-          </p>
-          {/* Amount slider */}
-          <div className="flex items-center justify-between mb-2">
-            <p style={{ color: 'var(--muted-foreground)', fontSize: '13px' }}>{t('deviceControl.dispensedUnit')}</p>
-            <p style={{ color: '#7C5CFF', fontSize: '14px', fontWeight: 500 }}>{dispensedAmount}</p>
-          </div>
-          <div
-            className="relative w-full cursor-pointer overflow-hidden mb-4"
-            style={{ height: '28px', backgroundColor: 'var(--background)', borderRadius: '4px' }}
-            onPointerDown={(e) => {
-              e.preventDefault();
-              (e.target as HTMLElement).setPointerCapture(e.pointerId);
-              const rect = e.currentTarget.getBoundingClientRect();
-              const val = Math.round(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * 100);
-              setDispensedAmount(val);
-              updateDevice(device.id, { dispensedAmount: val });
-            }}
-            onPointerMove={(e) => {
-              if (e.buttons > 0) {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const val = Math.round(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * 100);
-                setDispensedAmount(val);
-                updateDevice(device.id, { dispensedAmount: val });
-              }
-            }}
-          >
-            <div
-              className="absolute top-0 left-0 h-full"
-              style={{
-                width: `${dispensedAmount}%`,
-                background: 'linear-gradient(90deg, #7C5CFF, #9B84FF)',
-                transition: 'width 50ms ease',
-                borderRadius: '4px 0 0 4px',
-              }}
-            />
-          </div>
-          {/* Unit selector */}
-          <div className="flex gap-2">
-            {['ml', 'cl', 'dl', 'l'].map((unit) => (
-              <button
-                key={unit}
-                onClick={() => updateDevice(device.id, { dispensedUnit: unit })}
-                className="flex-1 py-2 rounded-xl transition-all"
+      {device.type === 'sprinkler' && (() => {
+        const FLOW_UNITS = [
+          { value: 'liters',       label: 'LITERS',       abbr: 'L'   },
+          { value: 'gallons',      label: 'GALLONS',      abbr: 'gal' },
+          { value: 'cubic-meters', label: 'CUBIC METERS', abbr: 'm³'  },
+          { value: 'cubic-feet',   label: 'CUBIC FEET',   abbr: 'ft³' },
+        ] as const;
+        const currentUnit = FLOW_UNITS.find((u) => u.value === flowRateUnit) ?? FLOW_UNITS[0];
+
+        return (
+          <div className="p-4 mb-3" style={{ backgroundColor: 'var(--card)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)' }}>
+            {/* Section label */}
+            <p style={{ color: 'var(--muted-foreground)', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>
+              Flow Rate
+            </p>
+
+            {/* Numeric input + unit dropdown */}
+            <div className="flex gap-2 mb-4" style={{ alignItems: 'stretch' }}>
+              {/* Numeric input */}
+              <div
                 style={{
-                  backgroundColor: (device.dispensedUnit ?? 'ml') === unit ? '#7C5CFF' : 'var(--muted)',
-                  color: '#fff',
-                  fontSize: '13px',
-                  fontWeight: 500,
+                  flex: 1,
+                  backgroundColor: 'var(--background)',
+                  borderRadius: '10px',
+                  border: '1px solid var(--muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 14px',
+                  gap: '8px',
                 }}
               >
-                {unit}
-              </button>
-            ))}
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={flowRateInput}
+                  onChange={(e) => setFlowRateInput(e.target.value)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: 'var(--foreground)',
+                    fontSize: '22px',
+                    fontWeight: 600,
+                    padding: '12px 0',
+                    width: '100%',
+                    minWidth: 0,
+                  }}
+                  placeholder="0"
+                />
+                <span style={{ color: 'var(--muted-foreground)', fontSize: '12px', flexShrink: 0 }}>
+                  {currentUnit.abbr}
+                </span>
+              </div>
+
+              {/* Unit dropdown */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  onClick={() => setFlowRateDropdownOpen(!flowRateDropdownOpen)}
+                  style={{
+                    height: '100%',
+                    padding: '0 14px',
+                    borderRadius: '10px',
+                    backgroundColor: 'var(--background)',
+                    border: '1px solid var(--muted)',
+                    color: 'var(--foreground)',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    whiteSpace: 'nowrap',
+                    letterSpacing: '0.03em',
+                    minWidth: '130px',
+                    justifyContent: 'space-between',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(124,92,255,0.5)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--muted)')}
+                >
+                  <span>{currentUnit.label}</span>
+                  <ChevronDown
+                    size={13}
+                    style={{
+                      transform: flowRateDropdownOpen ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 200ms ease',
+                      color: 'var(--muted-foreground)',
+                      flexShrink: 0,
+                    }}
+                  />
+                </button>
+
+                {flowRateDropdownOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 6px)',
+                      right: 0,
+                      backgroundColor: 'var(--card)',
+                      borderRadius: '10px',
+                      border: '1px solid var(--muted)',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                      zIndex: 30,
+                      overflow: 'hidden',
+                      minWidth: '160px',
+                    }}
+                  >
+                    {FLOW_UNITS.map(({ value, label }, idx) => (
+                      <button
+                        key={value}
+                        onClick={() => {
+                          setFlowRateUnit(value);
+                          setFlowRateDropdownOpen(false);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '10px 16px',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: flowRateUnit === value ? 700 : 500,
+                          color: flowRateUnit === value ? '#7C5CFF' : 'var(--foreground)',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderBottom: idx < FLOW_UNITS.length - 1 ? '1px solid var(--muted)' : 'none',
+                          cursor: 'pointer',
+                          letterSpacing: '0.04em',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(124,92,255,0.07)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        {label}
+                        {flowRateUnit === value && (
+                          <div
+                            style={{
+                              width: '16px', height: '16px', borderRadius: '50%',
+                              backgroundColor: '#7C5CFF',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                              <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Confirm button */}
+            <button
+              onClick={() => {
+                const parsed = parseFloat(flowRateInput);
+                const amount = isNaN(parsed) ? 0 : Math.max(0, parsed);
+                setDispensedAmount(amount);
+                updateDevice(device.id, {
+                  dispensedAmount: amount,
+                  dispensedUnit: flowRateUnit,
+                });
+                setFlowRateDropdownOpen(false);
+              }}
+              className="w-full py-3 rounded-xl transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #7C5CFF, #6B4FE0)',
+                color: '#fff',
+                fontSize: '14px',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(124,92,255,0.3)',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+            >
+              Confirm
+            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* === ALARM CONTROLS === */}
       {device.type === 'alarm' && (

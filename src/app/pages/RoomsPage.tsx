@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { RoomIcon } from '../components/DeviceIcon';
 import { useTranslation } from '../i18n/useTranslation';
+import { useBasePath } from '../utils/useBasePath';
 
 // Flexible icon library for rooms and spaces
 const roomIconOptions = [
@@ -43,7 +44,8 @@ export function RoomsPage() {
   const navigate = useNavigate();
   const { homes, selectedHomeId, addRoom, updateRoom, deleteRoom } = useApp();
   const { t } = useTranslation();
-  
+  const basePath = useBasePath();
+
   // Use URL homeId if available (for backwards compatibility), otherwise use selectedHomeId
   const activeHomeId = urlHomeId || selectedHomeId;
   const home = homes.find((h) => h.id === activeHomeId);
@@ -207,7 +209,7 @@ export function RoomsPage() {
             return (
               <div key={room.id} className="relative">
                 <button
-                  onClick={() => !isEditMode && navigate(`/homes/${activeHomeId}/rooms/${room.id}/devices`)}
+                  onClick={() => !isEditMode && navigate(`${basePath}/homes/${activeHomeId}/rooms/${room.id}/devices`)}
                   className="flex items-center gap-4 text-left w-full"
                   style={{
                     padding: '16px', borderRadius: '12px', backgroundColor: 'var(--card)', border: 'none',

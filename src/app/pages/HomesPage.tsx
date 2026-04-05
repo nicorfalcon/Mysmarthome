@@ -4,11 +4,13 @@ import { useApp } from '../context/AppContext';
 import { Plus, Pencil, ChevronRight, X, Check, Trash2 } from 'lucide-react';
 import { HomeIcon } from '../components/DeviceIcon';
 import { useTranslation } from '../i18n/useTranslation';
+import { useBasePath } from '../utils/useBasePath';
 
 export function HomesPage() {
   const { homes, addHome, updateHome, deleteHome } = useApp();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const basePath = useBasePath();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -115,7 +117,7 @@ export function HomesPage() {
           return (
             <div key={home.id}>
               <button
-                onClick={() => !isEditMode && navigate(`/homes/${home.id}/rooms`)}
+                onClick={() => !isEditMode && navigate(`${basePath}/homes/${home.id}/rooms`)}
                 className="flex items-center gap-4 text-left w-full"
                 style={{
                   padding: '16px',

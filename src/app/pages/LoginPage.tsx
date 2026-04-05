@@ -13,19 +13,19 @@ export function LoginPage() {
 
   const handleLogin = () => {
     setIsLoggedIn(true);
-    
-    // Single home flow: go directly to Rooms
+
+    // Single home flow: go directly to web dashboard
     if (homes.length === 1) {
       setSelectedHomeId(homes[0].id);
-      navigate('/rooms');
-    } 
+      navigate('/web');
+    }
     // Multi-home flow: show home selection screen
     else if (homes.length > 1) {
       navigate('/select-home');
     }
-    // No homes: fallback to homes management page
+    // No homes: fallback to web dashboard
     else {
-      navigate('/homes');
+      navigate('/web');
     }
   };
 
@@ -136,16 +136,6 @@ export function LoginPage() {
           Create account
         </button>
 
-        {/* Web version link */}
-        <button
-          onClick={() => navigate('/web')}
-          className="mt-6 transition-all"
-          style={{ color: 'var(--muted-foreground)', fontSize: '13px' }}
-          onMouseOver={(e) => (e.currentTarget.style.color = '#7C5CFF')}
-          onMouseOut={(e) => (e.currentTarget.style.color = 'var(--muted-foreground)')}
-        >
-          Use web version →
-        </button>
       </div>
 
       <style>{`
